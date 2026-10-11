@@ -26,7 +26,7 @@ export async function registerBusiness({ business_name, contact_email, contact_n
 export async function getMyBusiness() {
   const { data, error } = await supabase
     .from('tbl_business')
-    .select('business_id, business_name, owner_id, contact_email, contact_number, address, logo_url, created_at')
+    .select('business_id, business_name, owner_id, contact_email, contact_number, address, logo_url, cover_url, created_at')
     .maybeSingle();
 
   if (error) throw new Error('Failed to load business info.');
@@ -60,6 +60,46 @@ export async function uploadBusinessLogo(ownerId, businessId, file) {
     .maybeSingle();
 
   if (error) throw new Error('Failed to save logo.');
+  if (!data) throw new Error('Only the business owner can edit these details.');
+  return data;
+}
+
+// Uploads the store cover photo (the banner shown on the caterer cards) and
+// saves it to tbl_business.cover_url. Same bucket/RLS as the logo.
+export async function uploadBusinessCover(ownerId, businessId, file) {
+  const ext = file.name.split('.').pop();
+  const filePath = `${ownerId}/business-cover-${businessId}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+  if (uploadError) throw new Error('Failed to upload cover photo.');
+
+  const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+  const cover_url = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+  const { data, error } = await supabase
+    .from('tbl_business')
+    .update({ cover_url })
+    .eq('business_id', businessId)
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error('Failed to save cover photo.');
+  if (!data) throw new Error('Only the business owner can edit these details.');
+  return data;
+}
+
+export async function removeBusinessCover(businessId) {
+  const { data, error } = await supabase
+    .from('tbl_business')
+    .update({ cover_url: null })
+    .eq('business_id', businessId)
+    .select()
+    .maybeSingle();
+
+  if (error) throw new Error('Failed to remove cover photo.');
   if (!data) throw new Error('Only the business owner can edit these details.');
   return data;
 }

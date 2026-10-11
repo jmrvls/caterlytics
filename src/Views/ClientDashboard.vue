@@ -187,8 +187,8 @@
             class="group relative cursor-pointer text-left bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl overflow-hidden transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 flex flex-col"
           >
             <!-- Cover photo (first package photo), or a gradient with the initial -->
-            <div class="relative h-28 bg-gradient-to-br from-emerald-500 to-emerald-800 overflow-hidden">
-              <img v-if="b.cover_url" :src="b.cover_url" :alt="`${b.business_name} cover photo`" class="w-full h-full object-cover" loading="lazy" />
+            <div class="relative aspect-[16/7] bg-gradient-to-br from-emerald-500 to-emerald-800 overflow-hidden">
+              <img v-if="b.cover_url" :src="b.cover_url" :alt="`${b.business_name} cover photo`" class="w-full h-full object-cover object-[center_25%]" loading="lazy" />
               <span v-else class="absolute inset-0 flex items-center justify-center text-6xl font-extrabold text-white/25 select-none" aria-hidden="true">{{ b.business_name.charAt(0).toUpperCase() }}</span>
               <div class="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/35 to-transparent"></div>
               <div class="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
@@ -1971,7 +1971,8 @@ const businesses = computed(() => {
         address: p.tbl_business?.address || '',
         contact_number: p.tbl_business?.contact_number || '',
         logo_url: p.tbl_business?.logo_url || '',
-        cover_url: p.image_url || '',
+        cover_url: p.tbl_business?.cover_url || p.image_url || '',
+        has_store_cover: !!p.tbl_business?.cover_url,
         types: p.package_type ? [p.package_type] : [],
         package_count: 1,
         min_price: price

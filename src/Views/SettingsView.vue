@@ -93,6 +93,23 @@
             {{ businessError }}
           </div>
 
+          <!-- Store cover photo: the banner clients see on your caterer card -->
+          <div class="mb-6">
+            <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Store Cover Photo</p>
+            <div class="relative w-full aspect-[16/7] max-w-md rounded-xl overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-800 border border-gray-200 dark:border-gray-700">
+              <img v-if="business.cover_url" :src="business.cover_url" alt="Store cover photo" class="w-full h-full object-cover object-[center_25%]" />
+              <span v-else class="absolute inset-0 flex items-center justify-center text-sm font-semibold text-white/80 px-4 text-center">No cover photo yet. Clients will see your first package photo instead.</span>
+            </div>
+            <div v-if="isBusinessOwner" class="flex flex-wrap items-center gap-3 mt-3">
+              <input ref="coverInput" type="file" accept="image/png, image/jpeg, image/webp" class="hidden" @change="handleCoverChange" />
+              <button type="button" @click="coverInput.click()" :disabled="isUploadingCover" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+                {{ isUploadingCover ? 'Uploading...' : (business.cover_url ? 'Change Cover' : 'Upload Cover') }}
+              </button>
+              <button v-if="business.cover_url" type="button" @click="handleRemoveCover" :disabled="isUploadingCover" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">Remove</button>
+              <p class="text-xs text-gray-500 dark:text-gray-400">This is how clients will see it. Use a landscape photo and keep faces or food in the upper-middle part. JPG, PNG, or WEBP. Max 2MB.</p>
+            </div>
+          </div>
+
           <div class="flex flex-row items-center gap-4 mb-6">
             <div class="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-2xl overflow-hidden shrink-0">
               <img v-if="business.logo_url" :src="business.logo_url" alt="Business logo" class="w-full h-full object-cover" />
@@ -179,7 +196,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMyProfile, updateMyProfile, uploadMyAvatar, changeMyPassword } from '../services/profileService'
-import { getMyBusiness, updateMyBusiness, uploadBusinessLogo } from '../services/businessservice'
+import { getMyBusiness, updateMyBusiness, uploadBusinessLogo, uploadBusinessCover, removeBusinessCover } from '../services/businessservice'
 import { getStoredTheme, setTheme } from '../theme'
 import { validatePassword, validateImageFile, isValidPhMobile } from '../utils/validators'
 
@@ -215,6 +232,8 @@ const businessSuccess = ref('')
 const isSavingBusiness = ref(false)
 const logoInput = ref(null)
 const isUploadingLogo = ref(false)
+const coverInput = ref(null)
+const isUploadingCover = ref(false)
 
 // Editing is restricted to the original registrant (tbl_business.owner_id)
 // per RLS ("owner update own business") — other Admins in the same
@@ -337,6 +356,45 @@ async function handleAvatarChange(event) {
   } finally {
     isUploadingAvatar.value = false
     event.target.value = ''
+  }
+}
+
+async function handleCoverChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const coverProblem = validateImageFile(file)
+  if (coverProblem) {
+    businessError.value = coverProblem
+    event.target.value = ''
+    return
+  }
+  isUploadingCover.value = true
+  businessError.value = ''
+  businessSuccess.value = ''
+  try {
+    const updated = await uploadBusinessCover(currentUser.user_id, business.value.business_id, file)
+    business.value = { ...business.value, cover_url: updated.cover_url }
+    flash(businessSuccess, 'Store cover photo updated.')
+  } catch (error) {
+    businessError.value = error.message || 'Failed to upload cover photo.'
+  } finally {
+    isUploadingCover.value = false
+    event.target.value = ''
+  }
+}
+
+async function handleRemoveCover() {
+  isUploadingCover.value = true
+  businessError.value = ''
+  businessSuccess.value = ''
+  try {
+    await removeBusinessCover(business.value.business_id)
+    business.value = { ...business.value, cover_url: null }
+    flash(businessSuccess, 'Store cover photo removed.')
+  } catch (error) {
+    businessError.value = error.message || 'Failed to remove cover photo.'
+  } finally {
+    isUploadingCover.value = false
   }
 }
 
