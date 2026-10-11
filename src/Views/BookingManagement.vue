@@ -649,6 +649,7 @@ import {
   getSelectionsForBookings
 } from '../services/bookingService'
 import { getAllPackages, getPackageMenu, getAllMenuItems } from '../services/packageService'
+import { sendBookingConfirmationSms, sendBookingCancellationSms } from '../services/smsService'
 import {
   getAssignableStaff,
   getAssignedStaff,
@@ -1212,6 +1213,18 @@ async function handleStatusChange(booking, newStatus) {
       ...statusCounts.value,
       [previousStatus]: Math.max(0, (statusCounts.value[previousStatus] || 0) - 1),
       [newStatus]: (statusCounts.value[newStatus] || 0) + 1
+    }
+    // Text the client. Never blocks or undoes the status change; the admin is
+    // told when the text did not go out.
+    if (newStatus === 'Confirmed' || newStatus === 'Cancelled') {
+      const result = newStatus === 'Confirmed'
+        ? await sendBookingConfirmationSms(booking.booking_id)
+        : await sendBookingCancellationSms(booking.booking_id, previousStatus)
+      if (result?.sent) {
+        showStockNotice(`${stockNotice.value ? stockNotice.value + ' ' : ''}SMS sent to ${booking.client_name || 'the client'}.`)
+      } else if (result && result.reason !== 'already_sent') {
+        pageError.value = `Status updated, but the SMS was NOT sent: ${result.message || 'unknown error'}`
+      }
     }
   } catch (error) {
     booking.booking_status = previousStatus
