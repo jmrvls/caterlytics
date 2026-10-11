@@ -150,3 +150,23 @@ export async function receivePurchaseOrder(id, lines, { close = false, note = nu
   if (error) throw fail(error, 'Failed to receive the delivery.');
   return data;
 }
+
+// Marks a fully received order as paid (payment = { date, reference }), or clears it
+// (payment = null). Needs the paid_at / payment_reference columns from supplier_payables.sql.
+export async function setPurchaseOrderPaid(id, payment) {
+  const row = payment
+    ? { paid_at: payment.date || null, payment_reference: String(payment.reference || '').trim().slice(0, 80) || null }
+    : { paid_at: null, payment_reference: null };
+  if (payment && !row.paid_at) throw new Error('Choose the date it was paid.');
+
+  const { data, error } = await supabase.from('tbl_purchase_orders').update(row).eq('po_id', id).eq('status', 'Received').select('po_id');
+  if (error) {
+    if (error.code === '42703' || error.code === 'PGRST204' || /paid_at|payment_reference/.test(error.message || '')) {
+      const err = new Error('Payment tracking is not set up yet. Run supplier_payables.sql in the Supabase SQL Editor, then refresh.');
+      err.code = 'PAYABLES_NOT_SET_UP';
+      throw err;
+    }
+    throw fail(error, 'Failed to update the payment.');
+  }
+  ensureAffected(data, 'Only received orders can be marked as paid. Please refresh the page.');
+}

@@ -155,11 +155,41 @@
         <div v-else-if="bookings.length === 0" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">
           No upcoming Pending or Confirmed events to plan yet.
         </div>
-        <div v-else-if="!selectedBooking" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          Pick an event above to manage its guests and seating.
-        </div>
+        <section v-else-if="!selectedBooking">
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Upcoming events. Click one to manage its guests, seating, crew and kitchen prep.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <button
+              v-for="b in bookings" :key="b.booking_id" type="button"
+              @click="selectedBookingId = b.booking_id"
+              class="text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 p-4 transition"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ b.client_name }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ b.event_location || 'No venue yet' }}</p>
+                </div>
+                <span :class="b.booking_status === 'Confirmed' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'" class="text-[11px] font-semibold px-2 py-0.5 whitespace-nowrap">{{ b.booking_status }}</span>
+              </div>
+              <p class="mt-3 text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDateOnly(b.event_date) }}
+                <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· {{ daysUntilLabel(b.event_date) }}</span>
+              </p>
+              <div class="mt-3">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span>Guests added</span>
+                  <span>{{ overviewOf(b).added }} / {{ b.guest_count }}</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 dark:bg-gray-700">
+                  <div class="h-full bg-emerald-600" :style="{ width: pct(overviewOf(b).added, b.guest_count) + '%' }"></div>
+                </div>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ overviewOf(b).seated }} seated · {{ overviewOf(b).crew }} crew assigned</p>
+            </button>
+          </div>
+        </section>
 
         <template v-else>
+          <button type="button" @click="backToEvents" class="mb-3 text-sm text-emerald-700 dark:text-emerald-300 hover:underline print:hidden">← All events</button>
+
           <!-- Event summary strip -->
           <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
             <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
@@ -182,6 +212,29 @@
               <p class="text-xs text-gray-500 dark:text-gray-400">Seated</p>
               <p class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ seatedCount }} / {{ activeGuests.length }}</p>
             </div>
+          </div>
+
+          <!-- Readiness -->
+          <div class="mb-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 print:hidden">
+            <div class="flex items-center justify-between mb-2">
+              <p class="font-semibold text-gray-900 dark:text-gray-100">Event readiness</p>
+              <p class="text-sm font-bold" :class="readiness.overall >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'">{{ readiness.overall }}%</p>
+            </div>
+            <div class="h-2 bg-gray-100 dark:bg-gray-700 mb-3">
+              <div class="h-full bg-emerald-600 transition-all" :style="{ width: readiness.overall + '%' }"></div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div v-for="m in readiness.items" :key="m.label">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span>{{ m.label }}</span>
+                  <span>{{ m.text }}</span>
+                </div>
+                <div class="h-1.5 bg-gray-100 dark:bg-gray-700">
+                  <div class="h-full" :class="m.warn ? 'bg-amber-500' : 'bg-emerald-600'" :style="{ width: m.pct + '%' }"></div>
+                </div>
+              </div>
+            </div>
+            <p v-if="readiness.stockShort" class="mt-3 text-xs text-red-600 dark:text-red-400">{{ readiness.stockShort }} ingredient(s) short on stock. See Kitchen Prep.</p>
           </div>
 
           <p v-if="overBooked" class="mb-4 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 print:hidden">
@@ -274,10 +327,16 @@
               <button @click="autoFillTables" :disabled="tables.length === 0 || unseatedGuests.length === 0 || isAutoSeating" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none disabled:opacity-40">{{ isAutoSeating ? 'Seating…' : 'Auto-seat the rest' }}</button>
             </div>
 
+            <p v-if="seatWarning" :class="seatWarning.level === 'error' ? 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'" class="mb-4 text-sm border px-3 py-2 print:hidden">{{ seatWarning.text }}</p>
+            <p v-if="canEdit && tables.length && guests.length" class="mb-3 text-xs text-gray-400 print:hidden">Tip: drag a guest onto a table to seat them, or back to the "Not yet seated" box to unseat. On a phone, use the "Seat at…" menu.</p>
+
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
               <div class="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
                 <p v-if="tables.length === 0" class="text-sm text-gray-500 dark:text-gray-400 md:col-span-2">No tables yet. Add one above.</p>
-                <div v-for="t in tables" :key="t.table_id" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                <div v-for="t in tables" :key="t.table_id"
+                  @dragover.prevent="onDragOver(t.table_id)" @dragleave="dragOverTable = null" @drop.prevent="onDrop(t.table_id)"
+                  :class="dragOverTable === t.table_id ? 'ring-2 ring-emerald-500' : ''"
+                  class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
                   <div class="flex items-center justify-between gap-2 mb-1">
                     <p class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ t.label }}</p>
                     <div v-if="canEdit" class="flex gap-3 text-xs">
@@ -292,7 +351,10 @@
                     <div class="h-full bg-emerald-600" :style="{ width: Math.min(100, (seatedAt(t.table_id).length / t.capacity) * 100) + '%' }"></div>
                   </div>
                   <ul class="space-y-1">
-                    <li v-for="g in seatedAt(t.table_id)" :key="g.guest_id" class="flex items-center justify-between text-sm text-gray-800 dark:text-gray-200">
+                    <li v-for="g in seatedAt(t.table_id)" :key="g.guest_id"
+                      :draggable="canEdit" @dragstart="onDragStart(g, $event)" @dragend="endDrag"
+                      :class="canEdit ? 'cursor-grab active:cursor-grabbing' : ''"
+                      class="flex items-center justify-between text-sm text-gray-800 dark:text-gray-200">
                       <span class="truncate">{{ g.full_name }}
                         <span v-if="(g.dietary_preferences || []).length || g.allergies" class="text-xs text-amber-600 dark:text-amber-400">•</span>
                       </span>
@@ -303,10 +365,16 @@
                 </div>
               </div>
 
-              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 h-fit">
+              <div
+                @dragover.prevent="onDragOver('unseated')" @dragleave="dragOverTable = null" @drop.prevent="onDrop(null)"
+                :class="dragOverTable === 'unseated' ? 'ring-2 ring-emerald-500' : ''"
+                class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 h-fit">
                 <p class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Not yet seated ({{ unseatedGuests.length }})</p>
                 <ul class="space-y-2">
-                  <li v-for="g in unseatedGuests" :key="g.guest_id" class="flex items-center justify-between gap-2 text-sm text-gray-800 dark:text-gray-200">
+                  <li v-for="g in unseatedGuests" :key="g.guest_id"
+                    :draggable="canEdit" @dragstart="onDragStart(g, $event)" @dragend="endDrag"
+                    :class="canEdit ? 'cursor-grab active:cursor-grabbing' : ''"
+                    class="flex items-center justify-between gap-2 text-sm text-gray-800 dark:text-gray-200">
                     <span class="truncate">{{ g.full_name }}</span>
                     <select v-if="canEdit" @change="seatFromSelect(g, $event)" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs rounded-none max-w-[9rem]">
                       <option value="">Seat at…</option>
@@ -316,6 +384,57 @@
                   <li v-if="unseatedGuests.length === 0" class="text-xs text-gray-400">Everyone attending is seated.</li>
                 </ul>
                 <p class="text-xs text-gray-400 mt-3">Declined guests are not counted for seats.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============ CREW ============ -->
+          <section v-else-if="activeTab === 'Crew'">
+            <p v-if="crewError" class="mb-3 text-sm text-red-600 dark:text-red-400">{{ crewError }}</p>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+              <div class="xl:col-span-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-50 dark:bg-gray-900/40 text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+                    <tr>
+                      <th class="px-3 py-2">Name</th>
+                      <th class="px-3 py-2">Position</th>
+                      <th class="px-3 py-2">Contact</th>
+                      <th class="px-3 py-2">Status on this date</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tr v-if="crew.length === 0">
+                      <td colspan="4" class="px-3 py-6 text-center text-gray-500 dark:text-gray-400">No staff assigned yet. Assign them from Event Bookings → Assign Staff.</td>
+                    </tr>
+                    <tr v-for="c in crew" :key="c.id" class="text-gray-800 dark:text-gray-200">
+                      <td class="px-3 py-2 font-medium">{{ c.full_name }}</td>
+                      <td class="px-3 py-2">{{ c.position || '—' }}</td>
+                      <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ c.contact_number || '—' }}</td>
+                      <td class="px-3 py-2">
+                        <div class="flex flex-wrap gap-1">
+                          <span v-if="c.onLeave" class="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">On leave{{ c.onLeave.reason ? ': ' + c.onLeave.reason : '' }}</span>
+                          <span v-if="c.otherEvent" class="text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Also booked: {{ c.otherEvent.conflicting_client }}</span>
+                          <span v-if="!c.onLeave && !c.otherEvent" class="text-xs px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Clear</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                <p class="font-semibold text-gray-900 dark:text-gray-100">Suggested crew</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Based on {{ crewBasisCount }} guests ({{ crewBasisLabel }}).</p>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                  <li v-for="row in crewComparison" :key="row.position" class="flex items-center justify-between py-1.5 text-gray-800 dark:text-gray-200">
+                    <span>{{ row.position }}</span>
+                    <span class="font-semibold" :class="row.short > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">
+                      {{ row.have }} / {{ row.need }}<span v-if="row.short > 0" class="font-normal text-xs"> · need {{ row.short }} more</span>
+                    </span>
+                  </li>
+                </ul>
+                <p class="text-xs text-gray-400 mt-3">Rule of thumb: 1 server per {{ STAFFING_RATIOS.guestsPerServer }} guests, 1 cook per {{ STAFFING_RATIOS.guestsPerCook }}, 1 coordinator per {{ STAFFING_RATIOS.guestsPerCoordinator }}.</p>
               </div>
             </div>
           </section>
@@ -558,7 +677,13 @@ import {
   deleteTable,
   seatGuest,
   summarizeDietary,
-  rsvpSummary
+  rsvpSummary,
+  getEventOverview,
+  getEventCrew,
+  suggestCrew,
+  countCrewByPosition,
+  totalSeats,
+  STAFFING_RATIOS
 } from '../services/planningservice'
 import {
   dishKey,
@@ -586,7 +711,7 @@ function toggleSidebar() {
 }
 
 // ---------- State ----------
-const tabs = ['Guest List', 'Seating', 'Dietary', 'Kitchen Prep']
+const tabs = ['Guest List', 'Seating', 'Crew', 'Dietary', 'Kitchen Prep']
 // Remember the last event + tab so leaving this page and coming back doesn't reset them.
 const SELECTION_KEY = 'caterlytics:planning-selection'
 function readSavedSelection() {
@@ -654,6 +779,133 @@ const filteredGuests = computed(() => {
   })
 })
 
+// ---------- Landing cards ----------
+const overview = ref({})
+const EMPTY_OVERVIEW = { added: 0, seated: 0, crew: 0 }
+const overviewOf = (b) => overview.value[b.booking_id] || EMPTY_OVERVIEW
+const pct = (n, d) => (d > 0 ? Math.max(0, Math.min(100, Math.round((n / d) * 100))) : 0)
+
+function daysUntilLabel(dateStr) {
+  const today = new Date(localToday() + 'T00:00:00')
+  const d = new Date(String(dateStr).slice(0, 10) + 'T00:00:00')
+  const days = Math.round((d - today) / 86400000)
+  if (Number.isNaN(days)) return ''
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  return `in ${days} days`
+}
+
+async function loadOverview() {
+  try {
+    overview.value = await getEventOverview(bookings.value.map((b) => b.booking_id))
+  } catch {
+    overview.value = {} // cards still show; counts just read 0
+  }
+}
+
+function backToEvents() {
+  selectedBookingId.value = ''
+  loadOverview() // so the cards reflect what was just changed
+}
+
+// ---------- Crew ----------
+const crew = ref([])
+const crewError = ref('')
+
+async function loadCrew() {
+  const b = selectedBooking.value
+  if (!b) return
+  const bookingId = b.booking_id
+  crewError.value = ''
+  try {
+    const result = await getEventCrew(bookingId, b.event_date)
+    if (bookingId === selectedBookingId.value) crew.value = result
+  } catch (e) {
+    if (bookingId === selectedBookingId.value) {
+      crew.value = []
+      crewError.value = e.message
+    }
+  }
+}
+
+// Plan for the larger of: guests who are coming, or what the client booked.
+const crewBasisCount = computed(() => Math.max(activeGuests.value.length, selectedBooking.value?.guest_count || 0))
+const crewBasisLabel = computed(() => (activeGuests.value.length >= (selectedBooking.value?.guest_count || 0) ? 'guest list' : 'booked count'))
+const crewNeeded = computed(() => suggestCrew(crewBasisCount.value))
+const crewHave = computed(() => countCrewByPosition(crew.value))
+const crewComparison = computed(() =>
+  Object.keys(crewNeeded.value).map((position) => ({
+    position,
+    need: crewNeeded.value[position],
+    have: crewHave.value[position] || 0,
+    short: Math.max(0, crewNeeded.value[position] - (crewHave.value[position] || 0))
+  }))
+)
+
+// ---------- Seat shortage ----------
+const seatCapacity = computed(() => totalSeats(tables.value))
+const seatWarning = computed(() => {
+  if (!selectedBooking.value || tables.value.length === 0) return null
+  const onList = activeGuests.value.length
+  const booked = selectedBooking.value.guest_count || 0
+  if (onList > seatCapacity.value) {
+    return { level: 'error', text: `Short by ${onList - seatCapacity.value} seats. ${onList} guests are attending or pending, but the tables only seat ${seatCapacity.value}.` }
+  }
+  if (booked > seatCapacity.value) {
+    return { level: 'warn', text: `Tables seat ${seatCapacity.value}, but ${booked} guests were booked. Add ${booked - seatCapacity.value} more seats if they will all come.` }
+  }
+  return null
+})
+
+// ---------- Readiness ----------
+const readiness = computed(() => {
+  const b = selectedBooking.value
+  if (!b) return { overall: 0, items: [], stockShort: 0 }
+  const booked = b.guest_count || 0
+  const items = []
+
+  items.push({ label: 'Guests added', text: `${activeGuests.value.length} / ${booked}`, pct: pct(activeGuests.value.length, booked) })
+  items.push({ label: 'Seated', text: `${seatedCount.value} / ${activeGuests.value.length}`, pct: pct(seatedCount.value, activeGuests.value.length), warn: !!seatWarning.value })
+
+  const needed = crewNeeded.value
+  const needTotal = Object.values(needed).reduce((a, n) => a + n, 0)
+  const haveTotal = Object.keys(needed).reduce((a, k) => a + Math.min(needed[k], crewHave.value[k] || 0), 0)
+  items.push({ label: 'Crew', text: `${crew.value.length} assigned`, pct: pct(haveTotal, needTotal), warn: crewComparison.value.some((r) => r.short > 0) })
+
+  const stockShort = prepShortItems.value.length
+  if (prep.value) {
+    items.push({ label: 'Kitchen prep', text: `${prepDoneCount.value} / ${prepTaskCount.value}`, pct: pct(prepDoneCount.value, prepTaskCount.value), warn: stockShort > 0 })
+  }
+
+  const overall = Math.round(items.reduce((a, m) => a + m.pct, 0) / items.length)
+  return { overall, items, stockShort }
+})
+
+// ---------- Drag and drop (seating) ----------
+const draggedGuest = ref(null)
+const dragOverTable = ref(null)
+
+function onDragStart(g, event) {
+  if (!canEdit.value) return
+  draggedGuest.value = g
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', String(g.guest_id)) // Firefox needs data set to start a drag
+}
+function onDragOver(target) {
+  if (draggedGuest.value) dragOverTable.value = target
+}
+function endDrag() {
+  draggedGuest.value = null
+  dragOverTable.value = null
+}
+async function onDrop(tableId) {
+  const g = draggedGuest.value
+  endDrag()
+  if (!g || !canEdit.value) return
+  if ((g.table_id || null) === (tableId || null)) return // dropped where they already are
+  await moveGuest(g, tableId)
+}
+
 function tableLabel(tableId) {
   return tables.value.find((t) => t.table_id === tableId)?.label || '—'
 }
@@ -666,6 +918,7 @@ async function loadBookings() {
   isLoadingBookings.value = true
   try {
     bookings.value = await getPlannableBookings(localToday())
+    loadOverview()
   } catch (e) {
     pageError.value = e.message
   } finally {
@@ -681,12 +934,14 @@ async function loadPlan() {
   // Clear the previous event's data so it can never show under the new event.
   guests.value = []
   tables.value = []
+  crew.value = []
   try {
     // Tables first-class so guests can resolve their table label.
     const [t, g] = await Promise.all([getTables(bookingId), getGuests(bookingId)])
     if (bookingId !== selectedBookingId.value) return // user switched events meanwhile
     tables.value = t
     guests.value = g
+    loadCrew() // separate try/catch inside: a crew problem never blocks guests or seating
   } catch (e) {
     if (bookingId === selectedBookingId.value) pageError.value = e.message
   } finally {
@@ -716,7 +971,7 @@ async function restoreSelection() {
     return
   }
   await loadPlan()
-  if (activeTab.value === 'Kitchen Prep') loadPrep()
+  loadPrep()
 }
 
 // ---------- Guests ----------
@@ -938,13 +1193,11 @@ async function togglePrep(key, event) {
   }
 }
 
-// Load lazily: only when the Kitchen Prep tab is open for an event.
-watch([activeTab, selectedBookingId], ([tab]) => {
-  if (tab === 'Kitchen Prep') loadPrep()
-})
-watch(selectedBookingId, () => {
+// Load the prep list whenever an event opens: the readiness bar needs its totals.
+watch(selectedBookingId, (id) => {
   prep.value = null
   prepError.value = ''
+  if (id) loadPrep()
 })
 
 function printSummary() {

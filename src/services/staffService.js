@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { localToday } from '../utils/date';
 
 // supabase.functions.invoke() puts the function's JSON reply on
 // `error.context` (a fetch Response) -- NOT on `data`, and `error.context.error`
@@ -15,15 +16,21 @@ async function functionErrorMessage(error, fallback) {
   return fallback;
 }
 
+const PROFILE_COLUMNS = 'id, username, full_name, role, contact_number, availability, position, avatar_url';
+
 export async function getUsers() {
-  const { data, error } = await supabase
+  const run = (cols) => supabase
     .from('tbl_profiles')
-    .select('id, username, full_name, role, contact_number, availability, position, avatar_url')
+    .select(cols)
     .neq('role', 'Client')
     .order('username', { ascending: true });
 
-  if (error) throw new Error('Failed to fetch users.');
-  return { users: data || [] };
+  let res = await run(`${PROFILE_COLUMNS}, is_active`);
+  // 42703 = column does not exist yet (staff_improvements.sql not run) -- keep the page working.
+  if (res.error && res.error.code === '42703') res = await run(PROFILE_COLUMNS);
+
+  if (res.error) throw new Error('Failed to fetch users.');
+  return { users: (res.data || []).map((u) => ({ ...u, is_active: u.is_active ?? true })) };
 }
 
 export async function createStaffUser(username, email, full_name, role, contact_number, availability, position) {
@@ -82,4 +89,88 @@ export async function deleteStaffUser(userId) {
     throw new Error(await functionErrorMessage(error, 'Failed to delete account.'));
   }
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Staff page extras
+// ---------------------------------------------------------------------------
+
+// Upcoming (today onward) Pending/Confirmed events for every staff member,
+// grouped as { [staff_id]: [booking, ...] } and sorted nearest-first.
+export async function getStaffWorkload() {
+  const todayStr = localToday();
+  const { data, error } = await supabase
+    .from('tbl_booking_staff')
+    .select('staff_id, tbl_bookings!inner(booking_id, client_name, event_date, event_time, event_location, booking_status, guest_count, package_name)')
+    .gte('tbl_bookings.event_date', todayStr)
+    .in('tbl_bookings.booking_status', ['Pending', 'Confirmed']);
+
+  if (error) throw new Error('Failed to load staff workload.');
+
+  const map = {};
+  for (const row of data || []) {
+    if (!row.tbl_bookings) continue;
+    (map[row.staff_id] ||= []).push(row.tbl_bookings);
+  }
+  for (const id of Object.keys(map)) {
+    map[id].sort((a, b) =>
+      String(a.event_date).localeCompare(String(b.event_date)) ||
+      String(a.event_time || '').localeCompare(String(b.event_time || '')));
+  }
+  return map;
+}
+
+// Everyone's leave dates from today onward: { [staff_id]: [{ unavailable_date, reason }] }.
+export async function getUpcomingLeaveMap() {
+  const { data, error } = await supabase
+    .from('tbl_staff_unavailability')
+    .select('staff_id, unavailable_date, reason')
+    .gte('unavailable_date', localToday());
+
+  if (error) throw new Error('Failed to load leave dates.');
+
+  const map = {};
+  for (const row of data || []) (map[row.staff_id] ||= []).push(row);
+  return map;
+}
+
+// Email + "invitation not accepted yet" for each team member (needs the
+// manage-staff edge function; the page just hides those bits if it's missing).
+export async function getInviteStatus() {
+  const { data, error } = await supabase.functions.invoke('manage-staff', { body: { action: 'status' } });
+  if (error) throw new Error(await functionErrorMessage(error, 'Failed to load invite status.'));
+  return data?.users || {};
+}
+
+export async function resendInvite(userId) {
+  const { data, error } = await supabase.functions.invoke('manage-staff', {
+    body: { action: 'resend', user_id: userId, redirectTo: `${window.location.origin}/reset-password` },
+  });
+  if (error) throw new Error(await functionErrorMessage(error, 'Failed to resend invitation.'));
+  return data;
+}
+
+// Deactivate (active = false) or reactivate (active = true) an account.
+export async function setStaffActive(userId, active) {
+  const { data, error } = await supabase.functions.invoke('manage-staff', {
+    body: { action: 'set_active', user_id: userId, active },
+  });
+  if (error) throw new Error(await functionErrorMessage(error, 'Failed to update the account.'));
+  return data;
+}
+
+// Bulk: set the same availability flag on several accounts at once.
+export async function bulkSetAvailability(ids, availability) {
+  if (!ids || ids.length === 0) return 0;
+  const { data, error } = await supabase
+    .from('tbl_profiles')
+    .update({ availability })
+    .in('id', ids)
+    .select('id');
+
+  if (error) {
+    if (error.code === 'P0001' && error.message) throw new Error(error.message);
+    throw new Error('Failed to update availability.');
+  }
+  return (data || []).length;
 }

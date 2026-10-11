@@ -4,14 +4,20 @@ import { localToday } from '../utils/date';
 // Staff members selectable for event assignment (role = 'Staff' only --
 // Admin/Owner-Manager are managers, not field staff to schedule on events).
 export async function getAssignableStaff() {
-  const { data, error } = await supabase
-    .from('tbl_profiles')
-    .select('id, full_name, contact_number, availability, position')
-    .eq('role', 'Staff')
-    .order('full_name', { ascending: true });
+  const run = (cols, filterActive) => {
+    let q = supabase.from('tbl_profiles').select(cols).eq('role', 'Staff').order('full_name', { ascending: true });
+    // Deactivated accounts must not be offered for new assignments.
+    if (filterActive) q = q.neq('is_active', false);
+    return q;
+  };
 
-  if (error) throw new Error('Failed to load staff list.');
-  return data || [];
+  const cols = 'id, full_name, contact_number, availability, position';
+  let res = await run(cols, true);
+  // is_active column not added yet (staff_improvements.sql) -> behave as before.
+  if (res.error && res.error.code === '42703') res = await run(cols, false);
+
+  if (res.error) throw new Error('Failed to load staff list.');
+  return res.data || [];
 }
 
 // Assigned staff for a single booking (used when opening the Assign Staff modal).

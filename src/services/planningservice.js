@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { toTitleCase } from '../utils/textFormat';
+import { getUnavailableStaffOnDate, getStaffScheduleConflicts } from './staffassignmentservice';
 
 // Fixed tag list so the dietary summary counts are consistent. Anything else
 // goes in the free-text "allergies" / "notes" fields.
@@ -278,4 +279,92 @@ export function rsvpSummary(guests) {
   const out = { Pending: 0, Attending: 0, Declined: 0 };
   for (const g of guests) out[g.rsvp_status] = (out[g.rsvp_status] || 0) + 1;
   return out;
+}
+
+// ---------- Event overview (landing cards) ----------
+// One query per table for ALL listed events, so the landing page does not
+// fire a request per card. Returns { [booking_id]: { added, seated, crew } }
+// where "added" / "seated" ignore guests who declined.
+export async function getEventOverview(bookingIds) {
+  const out = {};
+  if (!bookingIds || bookingIds.length === 0) return out;
+  for (const id of bookingIds) out[id] = { added: 0, seated: 0, crew: 0 };
+
+  const [guestRes, crewRes] = await Promise.all([
+    supabase.from('tbl_event_guests').select('booking_id, rsvp_status, table_id').in('booking_id', bookingIds),
+    supabase.from('tbl_booking_staff').select('booking_id').in('booking_id', bookingIds),
+  ]);
+  // The cards are a convenience. If either lookup fails, show zeros instead of blocking the page.
+  for (const g of guestRes.data || []) {
+    if (!out[g.booking_id] || g.rsvp_status === 'Declined') continue;
+    out[g.booking_id].added += 1;
+    if (g.table_id) out[g.booking_id].seated += 1;
+  }
+  for (const c of crewRes.data || []) {
+    if (out[c.booking_id]) out[c.booking_id].crew += 1;
+  }
+  return out;
+}
+
+// ---------- Crew ----------
+// Staff assigned to this event (tbl_booking_staff), with leave and
+// double-booking conflicts on the event date.
+export async function getEventCrew(bookingId, eventDate) {
+  const { data, error } = await supabase
+    .from('tbl_booking_staff')
+    .select('staff_id, tbl_profiles!tbl_booking_staff_staff_id_fkey(id, full_name, contact_number, position, availability)')
+    .eq('booking_id', bookingId);
+
+  if (error) throw new Error('Failed to load the crew.');
+
+  const crew = (data || [])
+    .map((row) => row.tbl_profiles)
+    .filter(Boolean)
+    .sort((a, b) => String(a.full_name).localeCompare(String(b.full_name)));
+  const ids = crew.map((c) => c.id);
+
+  const [leave, clashes] = await Promise.all([
+    getUnavailableStaffOnDate(eventDate, ids).catch(() => []),
+    getStaffScheduleConflicts(eventDate, ids, bookingId).catch(() => []),
+  ]);
+
+  return crew.map((c) => ({
+    ...c,
+    onLeave: leave.find((l) => l.staff_id === c.id) || null,
+    otherEvent: clashes.find((x) => x.staff_id === c.id) || null,
+  }));
+}
+
+// Rule-of-thumb staffing for a buffet-style event. Adjust the ratios here,
+// they are the only place that decides the suggestion.
+export const STAFFING_RATIOS = {
+  guestsPerServer: 20,
+  guestsPerCook: 40,
+  guestsPerCoordinator: 100,
+};
+
+export function suggestCrew(guestCount) {
+  const n = Math.max(0, Number(guestCount) || 0);
+  if (n === 0) return { Server: 0, Cook: 0, Coordinator: 0 };
+  return {
+    Server: Math.max(1, Math.ceil(n / STAFFING_RATIOS.guestsPerServer)),
+    Cook: Math.max(1, Math.ceil(n / STAFFING_RATIOS.guestsPerCook)),
+    Coordinator: Math.max(1, Math.ceil(n / STAFFING_RATIOS.guestsPerCoordinator)),
+  };
+}
+
+// { Server: 3, Cook: 1, ... } for the assigned crew. Anything without a
+// position (or Driver / Other) is grouped under 'Other'.
+export function countCrewByPosition(crew) {
+  const out = { Server: 0, Cook: 0, Coordinator: 0, Driver: 0, Other: 0 };
+  for (const c of crew) {
+    const key = c.position in out ? c.position : 'Other';
+    out[key] += 1;
+  }
+  return out;
+}
+
+// ---------- Seating helpers ----------
+export function totalSeats(tables) {
+  return (tables || []).reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
 }

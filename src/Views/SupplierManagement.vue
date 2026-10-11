@@ -163,7 +163,7 @@
           <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto">
             <button v-for="t in TABS" :key="t.key" @click="tab = t.key"
               :class="tab === t.key ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 font-semibold' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100'"
-              class="px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition">{{ t.label }}</button>
+              class="px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition">{{ t.label }}<span v-if="tabBadge(t.key)" :class="tabBadge(t.key).warn ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'" class="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold rounded-full">{{ tabBadge(t.key).count }}</span></button>
           </div>
 
           <!-- SUPPLIERS -->
@@ -180,13 +180,20 @@
             <div v-else class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="bg-gray-50 dark:bg-gray-900 text-left text-xs uppercase text-gray-500 dark:text-gray-400">
-                  <tr><th class="px-4 py-3">Supplier</th><th class="px-4 py-3">Contact</th><th class="px-4 py-3">Terms</th><th class="px-4 py-3 text-right">Orders</th><th class="px-4 py-3 text-right">Open</th><th class="px-4 py-3 text-right">Received value</th><th class="px-4 py-3"></th></tr>
+                  <tr><th class="px-4 py-3">Supplier</th><th class="px-4 py-3">Contact</th><th class="px-4 py-3">Terms</th><th class="px-4 py-3">Reliability</th><th class="px-4 py-3 text-right">Orders</th><th class="px-4 py-3 text-right">Open</th><th class="px-4 py-3 text-right">Received value</th><th class="px-4 py-3"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                   <tr v-for="s in filteredSuppliers" :key="s.supplier_id" :class="s.is_active ? '' : 'opacity-60'" class="text-gray-700 dark:text-gray-300 align-top">
                     <td class="px-4 py-3"><p class="font-medium text-gray-900 dark:text-gray-100">{{ s.supplier_name }}<span v-if="!s.is_active" class="ml-2 text-xs text-gray-400">(inactive)</span></p><p class="text-xs text-gray-400">{{ s.category }}</p></td>
                     <td class="px-4 py-3"><p>{{ s.contact_person || '—' }}</p><p class="text-xs text-gray-400">{{ [s.contact_number, s.email].filter(Boolean).join(' · ') }}</p></td>
                     <td class="px-4 py-3 whitespace-nowrap">{{ s.payment_terms }}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                      <template v-if="scoreOf(s)?.rating">
+                        <span :class="RATING_STYLE[scoreOf(s).rating]" class="inline-block px-2 py-0.5 text-xs font-semibold" :title="scoreTitle(scoreOf(s))">{{ scoreOf(s).rating }}</span>
+                        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{{ scoreOf(s).onTimePct }}% on time · {{ scoreOf(s).fillPct }}% filled</p>
+                      </template>
+                      <span v-else class="text-xs text-gray-400 dark:text-gray-500" :title="`Needs ${SCORECARD_MIN_ORDERS} completed orders for a fair rating`">{{ scoreOf(s) ? `${scoreOf(s).completed} of ${SCORECARD_MIN_ORDERS} orders` : 'No data yet' }}</span>
+                    </td>
                     <td class="px-4 py-3 text-right">{{ statsOf(s).orders }}</td>
                     <td class="px-4 py-3 text-right">{{ statsOf(s).open }}</td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">{{ formatPeso(statsOf(s).spent) }}</td>
@@ -199,6 +206,40 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- SUGGESTED ORDERS -->
+          <div v-if="tab === 'suggested'">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+              <p class="text-sm text-gray-500 dark:text-gray-400">Items that are low on stock or short for pending events, grouped by their supplier. Anything already on an open order is left out.</p>
+              <button @click="loadNeeds" :disabled="needsLoading" :class="btnGhost" class="whitespace-nowrap">{{ needsLoading ? 'Checking events...' : 'Refresh' }}</button>
+            </div>
+            <p v-if="needsError" class="mb-3 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">{{ needsError }}</p>
+            <p v-if="inventoryError" class="mb-3 text-sm text-red-600 dark:text-red-400">Inventory could not be loaded, so no suggestions can be made.</p>
+            <p v-if="suggested.covered" class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ suggested.covered }} item{{ suggested.covered === 1 ? '' : 's' }} need restocking but {{ suggested.covered === 1 ? 'is' : 'are' }} already covered by an open order.</p>
+
+            <div v-if="!suggested.groups.length" :class="card" class="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">Nothing to reorder right now. Stock levels are fine and pending events are covered.</div>
+
+            <div v-for="g in suggested.groups" :key="g.key" :class="card" class="mb-4">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2 px-4 pt-4 pb-2">
+                <div class="flex-1 min-w-0">
+                  <h2 class="font-semibold text-gray-800 dark:text-gray-100 truncate">{{ g.name }}<span v-if="g.inactive" class="ml-2 text-xs font-normal text-gray-400">(inactive)</span></h2>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ g.lines.length }} item{{ g.lines.length === 1 ? '' : 's' }}<span v-if="g.estCost > 0"> · about {{ formatPeso(g.estCost) }}</span></p>
+                </div>
+                <button @click="createPoFromGroup(g)" :disabled="g.inactive" :class="btnPrimary" class="whitespace-nowrap">{{ g.key === 'none' ? 'Create PO (choose supplier)' : 'Create PO' }}</button>
+              </div>
+              <p v-if="g.key === 'none'" class="px-4 text-xs text-gray-500 dark:text-gray-400">These items have no supplier set in Inventory. Link them there so they are grouped automatically next time.</p>
+              <div class="divide-y divide-gray-100 dark:divide-gray-700 mt-2">
+                <div v-for="l in g.lines" :key="l.item.item_id" class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 px-4 py-2.5">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ l.item.item_name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ l.item.quantity }} {{ l.item.unit }} on hand<span v-if="l.shortBy > 0"> · short {{ Math.ceil(l.shortBy) }} {{ l.item.unit }} for pending events</span><span v-if="l.onOrder > 0"> · {{ l.onOrder }} already on order</span></p>
+                  </div>
+                  <span :class="reasonCls[l.reason]" class="inline-block px-2 py-0.5 text-xs font-semibold whitespace-nowrap">{{ reasonLabel[l.reason] }}</span>
+                  <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap sm:w-28 sm:text-right">Order {{ l.qty }} {{ l.item.unit }}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -246,6 +287,47 @@
                   <span :class="statusOf(o.status).cls" class="inline-block px-2 py-0.5 text-xs font-semibold whitespace-nowrap">{{ statusOf(o.status).label }}</span>
                   <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">{{ formatPeso(poOutstandingValue(o)) }}</span>
                   <button @click="openReceive(o)" class="px-3 py-1.5 bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition whitespace-nowrap">Receive</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAYABLES -->
+          <div v-if="tab === 'payables'">
+            <p v-if="!payablesReady" class="mb-4 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">Marking orders as paid needs a one-time database update. Run <span class="font-mono">supplier_payables.sql</span> in the Supabase SQL Editor, then refresh. Due dates below already work.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+              <div :class="card" class="p-4">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total unpaid</p>
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ formatPeso(payables.unpaidTotal) }}</p>
+              </div>
+              <div :class="card" class="p-4">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Overdue</p>
+                <p :class="payables.overdueTotal > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'" class="text-xl font-bold">{{ formatPeso(payables.overdueTotal) }}</p>
+              </div>
+              <div :class="card" class="p-4">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Due in the next 7 days</p>
+                <p class="text-xl font-bold text-gray-800 dark:text-gray-100">{{ formatPeso(payables.weekTotal) }}</p>
+              </div>
+            </div>
+            <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">An order becomes payable once it is fully received. Due date = date received + the supplier's payment terms.</p>
+
+            <div v-if="!payables.groups.length" :class="card" class="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">Nothing to pay yet. Fully received orders will show up here.</div>
+            <div v-for="g in payables.groups" :key="g.key" :class="card" class="mb-4">
+              <h2 :class="g.tone" class="font-semibold px-4 pt-4 pb-2">{{ g.title }} <span class="text-gray-400 font-normal">({{ g.rows.length }})</span></h2>
+              <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                <div v-for="r in g.rows" :key="r.po.po_id" class="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-3">
+                  <div class="sm:w-36 text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    <template v-if="r.paidAt">Paid {{ formatShortDate(r.paidAt) }}</template>
+                    <template v-else>{{ formatShortDate(r.due) }}</template>
+                    <p v-if="!r.paidAt" :class="r.days < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'" class="text-[11px] font-normal">{{ dueLabel(r.days) }}</p>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ r.po.supplier?.supplier_name }} <span class="text-gray-400 font-normal">· {{ r.po.po_number }}</span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">Received {{ formatShortDate(r.po.received_date) }} · {{ r.terms }}<span v-if="r.reference"> · Ref: {{ r.reference }}</span></p>
+                  </div>
+                  <span class="text-sm font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">{{ formatPeso(r.amount) }}</span>
+                  <button v-if="!r.paidAt" @click="openPay(r)" :disabled="!payablesReady" class="px-3 py-1.5 bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition whitespace-nowrap">Mark paid</button>
+                  <button v-else @click="askUnpay(r.po)" class="px-3 py-1.5 border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition whitespace-nowrap">Undo</button>
                 </div>
               </div>
             </div>
@@ -358,10 +440,13 @@
           </table>
         </div>
         <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 text-right mb-3">Total: {{ formatPeso(poTotal(detail)) }}</p>
+        <p v-if="detailPayment" class="text-sm mb-2" :class="detailPayment.paidAt ? 'text-emerald-700 dark:text-emerald-300' : detailPayment.days < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-300'"><span class="font-medium">Payment:</span> {{ detailPayment.paidAt ? `Paid ${formatShortDate(detailPayment.paidAt)}` : `Due ${formatShortDate(detailPayment.due)} (${detailPayment.terms}) · ${dueLabel(detailPayment.days)}` }}</p>
         <p v-if="detail.notes" class="text-sm text-gray-600 dark:text-gray-300 mb-2"><span class="font-medium">Notes:</span> {{ detail.notes }}</p>
         <p v-if="detail.delivery_notes" class="text-sm text-gray-600 dark:text-gray-300 mb-2 whitespace-pre-line"><span class="font-medium">Delivery notes:</span> {{ detail.delivery_notes }}</p>
         <div class="flex flex-wrap gap-2 mt-4">
           <button @click="detail = null" :class="btnGhost" class="flex-1 sm:flex-none">Close</button>
+          <button @click="downloadPdf(detail)" :disabled="isPdfBusy" :class="btnGhost" class="flex-1 sm:flex-none">{{ isPdfBusy ? 'Preparing...' : 'Download PDF' }}</button>
+          <button v-if="supplierOf(detail)?.email" @click="emailSupplier(detail)" :class="btnGhost" class="flex-1 sm:flex-none">Email supplier</button>
           <template v-if="detail.status === 'Draft'">
             <button @click="openPoModal(detail)" :class="btnGhost" class="flex-1 sm:flex-none">Edit</button>
             <button @click="askDeletePo(detail)" class="px-4 py-2.5 border border-red-200 dark:border-red-800 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex-1 sm:flex-none">Delete</button>
@@ -372,6 +457,24 @@
             <button @click="openReceive(detail)" :class="btnPrimary" class="flex-1 sm:flex-none">Receive delivery</button>
           </template>
           <button v-if="detail.status === 'Cancelled'" @click="askDeletePo(detail)" class="px-4 py-2.5 border border-red-200 dark:border-red-800 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARK PAID MODAL -->
+    <div v-if="paying" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="!isSaving && (paying = null)"></div>
+      <div class="relative bg-white dark:bg-gray-800 w-full max-w-md p-5 sm:p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Mark as paid</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ paying.po.po_number }} · {{ paying.po.supplier?.supplier_name }} · {{ formatPeso(paying.amount) }}</p>
+        <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-3">{{ modalError }}</div>
+        <label :class="lbl">Date paid</label>
+        <input v-model="paying.date" type="date" :max="today" :class="[inputCls, 'w-full mb-3']" />
+        <label :class="lbl">Reference <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input v-model="paying.reference" maxlength="80" placeholder="e.g. GCash ref no., check no." :class="[inputCls, 'w-full']" />
+        <div class="flex justify-end gap-2 mt-5">
+          <button @click="paying = null" :disabled="isSaving" :class="btnGhost">Cancel</button>
+          <button @click="submitPaid" :disabled="isSaving" :class="btnPrimary">{{ isSaving ? 'Saving...' : 'Confirm paid' }}</button>
         </div>
       </div>
     </div>
@@ -429,15 +532,18 @@ import { useSidebarState } from '../composables/useSidebarState'
 import { useChatUnread } from '../composables/useChatUnread'
 import { useReviewAlerts } from '../composables/useReviewAlerts'
 import { useRouter } from 'vue-router'
-import { getAllInventory } from '../services/inventoryService'
+import { getAllInventory, getUpcomingNeeds } from '../services/inventoryService'
+import { getMyBusiness } from '../services/businessservice'
+import { downloadPurchaseOrderPdf, buildPurchaseOrderMailto } from '../utils/purchaseOrderDoc'
 import {
   getSuppliers, createSupplier, updateSupplier, setSupplierActive, deleteSupplier,
-  getPurchaseOrders, savePurchaseOrder, setPurchaseOrderStatus, deletePurchaseOrder, receivePurchaseOrder
+  getPurchaseOrders, savePurchaseOrder, setPurchaseOrderStatus, deletePurchaseOrder, receivePurchaseOrder, setPurchaseOrderPaid
 } from '../services/supplierservice'
 import { UNIT_OPTIONS } from '../utils/inventory'
 import {
   SUPPLIER_CATEGORIES, PAYMENT_TERMS, PO_STATUS, OPEN_STATUSES, poTotal, lineTotal, poOutstandingValue,
-  isOverdue, buildSchedule, supplierStats, formatPeso, formatShortDate, localISODate
+  isOverdue, buildSchedule, supplierStats, formatPeso, formatShortDate, localISODate,
+  buildSuggestedOrders, supplierScorecards, SCORECARD_MIN_ORDERS, RATING_STYLE, buildPayables, payableInfo
 } from '../utils/suppliers'
 
 const router = useRouter()
@@ -463,8 +569,10 @@ const btnGhost = 'px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounde
 const btnPrimary = 'px-4 py-2.5 bg-emerald-600 text-white rounded-none text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 transition'
 const TABS = [
   { key: 'suppliers', label: 'Suppliers' },
+  { key: 'suggested', label: 'Suggested Orders' },
   { key: 'orders', label: 'Purchase Orders' },
   { key: 'schedule', label: 'Delivery Schedule' },
+  { key: 'payables', label: 'Payables' },
 ]
 
 const tab = ref('suppliers')
@@ -508,6 +616,60 @@ const cards = computed(() => {
   ]
 })
 
+const supplierById = computed(() => new Map(suppliers.value.map((s) => [s.supplier_id, s])))
+const supplierOf = (po) => supplierById.value.get(po?.supplier_id) || null
+
+// Reliability rating per supplier (from completed orders).
+const scoreboard = computed(() => supplierScorecards(orders.value))
+const scoreOf = (s) => scoreboard.value[s.supplier_id] || null
+const scoreTitle = (sc) =>
+  [`${sc.completed} completed orders`, `Average ${sc.avgLateDays} days late when late`, sc.avgLeadDays !== null ? `Average lead time ${sc.avgLeadDays} days` : '']
+    .filter(Boolean).join(' · ')
+
+// ---- Suggested orders ----
+const needs = ref(null)
+const needsLoading = ref(false)
+const needsError = ref('')
+const needsMap = computed(() => new Map((needs.value?.items || []).map((i) => [i.item_id, i])))
+const suggested = computed(() => buildSuggestedOrders({ inventory: inventory.value, orders: orders.value, needs: needsMap.value, suppliers: suppliers.value }))
+const reasonLabel = { event: 'Short for events', low: 'Low stock', near: 'Running low' }
+const reasonCls = {
+  event: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  low: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  near: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+}
+
+// Checks what pending events still need. If it fails, suggestions still work from stock levels.
+async function loadNeeds() {
+  if (needsLoading.value) return
+  needsLoading.value = true
+  needsError.value = ''
+  try {
+    const res = await getUpcomingNeeds()
+    needs.value = res
+    if (res.failed) needsError.value = `${res.failed} pending event(s) could not be checked, so their needs are not included.`
+  } catch (error) {
+    console.error(error)
+    needsError.value = 'Could not check pending events. Suggestions are based on stock levels only.'
+  } finally {
+    needsLoading.value = false
+  }
+}
+
+// ---- Payables ----
+const payables = computed(() => buildPayables(orders.value, supplierById.value, today.value))
+// The paid_at column only exists after supplier_payables.sql was run. Rows come back with
+// every column, so its absence from the first row tells us the update has not been applied.
+const payablesReady = computed(() => orders.value.length === 0 || 'paid_at' in orders.value[0])
+const detailPayment = computed(() => (detail.value ? payableInfo(detail.value, supplierOf(detail.value)?.payment_terms, today.value) : null))
+const dueLabel = (days) => (days < 0 ? `${-days} day${days === -1 ? '' : 's'} overdue` : days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : `in ${days} days`)
+
+const tabBadge = (key) => {
+  if (key === 'suggested') return suggested.value.groups.length ? { count: suggested.value.groups.reduce((n, g) => n + g.lines.length, 0), warn: false } : null
+  if (key === 'payables') return payables.value.overdueCount ? { count: payables.value.overdueCount, warn: true } : null
+  return null
+}
+
 const filteredSuppliers = computed(() => {
   const q = supplierSearch.value.trim().toLowerCase()
   return suppliers.value.filter((s) => {
@@ -541,6 +703,7 @@ onMounted(() => {
   todayTimer = setInterval(refreshToday, 60 * 1000)
   document.addEventListener('visibilitychange', refreshToday)
   loadAll().then(applyReorderFromQuery)
+  loadNeeds() // in the background: the Suggested Orders tab uses it
 })
 
 // Inventory's "Reorder" button sends us here with ?reorder=<item_id>:<qty>,...
@@ -564,15 +727,25 @@ function applyReorderFromQuery() {
   const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0]
 
   tab.value = 'orders'
-  openPoModal(null, best ? Number(best[0]) : '')
+  openPoWithItems(picks, best ? Number(best[0]) : '', 'Reorder from Inventory')
+}
+
+// Opens a new purchase order with the given items already filled in.
+// picks = [{ item (inventory row), qty }]
+function openPoWithItems(picks, supplierId, notes) {
+  openPoModal(null, supplierId)
   if (!showPoModal.value) return // no active supplier yet; openPoModal already explained why
-  poForm.value.notes = 'Reorder from Inventory'
+  poForm.value.notes = notes
   poForm.value.lines = picks.map(({ item, qty }) => {
     const line = newLine()
     pickItem(line, item.item_id)
     line.quantity = qty
     return line
   })
+}
+
+function createPoFromGroup(g) {
+  openPoWithItems(g.lines.map((l) => ({ item: l.item, qty: l.qty })), g.supplier_id || '', 'Reorder (suggested)')
 }
 
 async function loadAll(silent = false) {
@@ -796,6 +969,63 @@ async function submitReceive() {
   } finally {
     isSaving.value = false
   }
+}
+
+// ---- Payments ----
+const paying = ref(null)
+
+function openPay(row) {
+  modalError.value = ''
+  paying.value = { po: row.po, amount: row.amount, date: today.value, reference: '' }
+}
+
+async function submitPaid() {
+  if (isSaving.value) return
+  modalError.value = ''
+  const p = paying.value
+  if (!p.date) { modalError.value = 'Choose the date it was paid.'; return }
+  if (p.date > today.value) { modalError.value = 'The payment date cannot be in the future.'; return }
+  isSaving.value = true
+  try {
+    await setPurchaseOrderPaid(p.po.po_id, { date: p.date, reference: p.reference })
+    paying.value = null
+    flash(`${p.po.po_number} marked as paid.`)
+    await loadAll(true)
+  } catch (error) {
+    modalError.value = error?.message || 'Failed to save the payment.'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const askUnpay = (po) => (confirmState.value = { title: 'Mark as unpaid?', message: `${po.po_number} will go back to the unpaid list.`, action: 'Mark unpaid', done: 'Payment removed.', run: () => setPurchaseOrderPaid(po.po_id, null) })
+
+// ---- PDF / email ----
+const isPdfBusy = ref(false)
+let businessCache = null
+async function loadBusiness() {
+  if (businessCache) return businessCache
+  try { businessCache = await getMyBusiness() } catch { businessCache = null }
+  return businessCache
+}
+
+async function downloadPdf(po) {
+  if (isPdfBusy.value) return
+  isPdfBusy.value = true
+  modalError.value = ''
+  try {
+    await downloadPurchaseOrderPdf({ po, supplier: supplierOf(po), business: await loadBusiness() })
+  } catch (error) {
+    console.error(error)
+    modalError.value = 'Could not create the PDF. Please try again.'
+  } finally {
+    isPdfBusy.value = false
+  }
+}
+
+async function emailSupplier(po) {
+  const link = buildPurchaseOrderMailto({ po, supplier: supplierOf(po), business: await loadBusiness() })
+  if (link) window.location.href = link
 }
 
 // ---- Confirmations ----
