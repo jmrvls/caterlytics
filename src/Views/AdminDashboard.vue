@@ -294,9 +294,11 @@
             </div>
           </div>
 
+          <p v-if="dashboardError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">{{ dashboardError }}</p>
+
           <!-- Metric cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div @click="router.push('/admin/payments')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 2v8m0 0v2m0-2c-1.11 0-2.08-.402-2.599-1M12 6a9 9 0 100 18 9 9 0 000-18z" />
@@ -305,7 +307,7 @@
               </div>
               <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{{ isLoadingDashboard ? '…' : formatCurrency(totalRevenue) }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div @click="router.push('/admin/bookings')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -314,7 +316,7 @@
               </div>
               <p class="text-2xl font-black text-gray-900 dark:text-gray-100">{{ isLoadingDashboard ? '…' : totalBookings }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div @click="router.push('/admin/inventory')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4" />
@@ -323,7 +325,7 @@
               </div>
               <p class="text-2xl font-black" :class="!isLoadingDashboard && lowStockCount > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'">{{ isLoadingDashboard ? '…' : lowStockCount }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div @click="router.push('/admin/staff')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" />
@@ -339,56 +341,29 @@
             <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
               <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Booking Status</p>
               <div class="flex flex-col gap-2.5">
-                <div class="flex items-center justify-between text-sm">
+                <div v-for="row in bookingStatusRows" :key="row.label" class="flex items-center justify-between text-sm">
                   <span class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Active Events
+                    <span :class="row.dot" class="w-2.5 h-2.5 rounded-full shrink-0"></span>
+                    {{ row.label }}
                   </span>
-                  <span class="font-bold text-gray-900 dark:text-gray-100">{{ isLoadingDashboard ? '…' : activeEventsCount }}</span>
-                </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Completed
-                  </span>
-                  <span class="font-bold text-gray-900 dark:text-gray-100">{{ isLoadingDashboard ? '…' : completedBookingsCount }}</span>
+                  <span :class="row.count === 0 && !isLoadingDashboard ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'" class="font-bold">{{ isLoadingDashboard ? '…' : row.count }}</span>
                 </div>
               </div>
             </div>
             <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
               <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Payment Status</p>
               <div class="flex flex-col gap-2.5">
-                <div class="flex items-center justify-between text-sm">
+                <div v-for="row in paymentStatusRows" :key="row.label" class="flex items-center justify-between text-sm">
                   <span class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Fully Paid
+                    <span :class="row.dot" class="w-2.5 h-2.5 rounded-full shrink-0"></span>
+                    {{ row.label }}
                   </span>
-                  <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ isLoadingDashboard ? '…' : fullyPaidCount }}</span>
+                  <span :class="row.count === 0 && !isLoadingDashboard ? 'text-gray-400 dark:text-gray-500' : row.text" class="font-bold">{{ isLoadingDashboard ? '…' : row.count }}</span>
                 </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Partial
-                  </span>
-                  <span class="font-bold text-amber-500 dark:text-amber-400">{{ isLoadingDashboard ? '…' : partialCount }}</span>
-                </div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
-                    <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A2 2 0 003.82 21h16.36a2 2 0 001.71-3l-8.18-14.14a2 2 0 00-3.42 0z" />
-                    </svg>
-                    Unpaid
-                  </span>
-                  <span class="font-bold text-red-500 dark:text-red-400">{{ isLoadingDashboard ? '…' : unpaidCount }}</span>
-                </div>
+              </div>
+              <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
+                <span class="text-gray-500 dark:text-gray-400">Collected <span class="font-semibold text-emerald-600 dark:text-emerald-400">₱{{ isLoadingDashboard ? '…' : formatCurrency(totalRevenue) }}</span></span>
+                <span class="text-gray-500 dark:text-gray-400">To collect <span class="font-semibold text-amber-600 dark:text-amber-400">₱{{ isLoadingDashboard ? '…' : formatCurrency(outstandingTotal) }}</span></span>
               </div>
             </div>
           </div>
@@ -406,13 +381,53 @@
           <div v-else-if="recentBookings.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No bookings yet.</div>
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             <div v-for="b in recentBookings" :key="b.booking_id" class="bg-white dark:bg-gray-800 rounded-none border border-emerald-600 dark:border-gray-700 p-4">
-              <div class="h-1.5 w-10 bg-gray-200 dark:bg-gray-600 rounded-full mb-4"></div>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ formatDate(b.event_date) }}</p>
-              <p class="font-bold text-gray-900 dark:text-gray-100">{{ b.client_name }}</p>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">{{ b.package_name || 'No package' }}</p>
-              <span :class="statusBadgeClass(b.booking_status)" class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold">
-                {{ b.booking_status }}
-              </span>
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <p class="font-bold text-gray-900 dark:text-gray-100 truncate">{{ b.client_name }}</p>
+                <span :class="statusPillClass(b.booking_status)" class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ b.booking_status }}</span>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-300">{{ b.package_name || 'No package' }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ formatDate(b.event_date) }}</p>
+            </div>
+          </div>
+
+          <!-- Upcoming Events + Needs Attention -->
+          <div v-if="!isLoadingDashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
+            <!-- Upcoming Events -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-gray-900 dark:text-gray-100">Upcoming Events</h3>
+                <a href="#" @click.prevent="router.push('/admin/planning')" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Event Planning &rarr;</a>
+              </div>
+              <p v-if="upcomingEvents.length === 0" class="text-sm text-gray-400 dark:text-gray-500 py-4">No upcoming events.</p>
+              <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+                <li v-for="e in upcomingEvents" :key="e.booking_id" class="flex items-center justify-between gap-3 py-3">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{{ e.client_name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ e.package_name || 'No package' }} · {{ formatDate(e.event_date) }}</p>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <p class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ daysUntilLabel(e.event_date) }}</p>
+                    <span :class="statusPillClass(e.booking_status)" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold">{{ e.booking_status }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Needs Attention -->
+            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5">
+              <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Needs Attention</h3>
+              <p v-if="attentionItems.length === 0" class="text-sm text-emerald-600 dark:text-emerald-400 py-4">All good. Nothing needs your attention right now.</p>
+              <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+                <li v-for="item in attentionItems" :key="item.label">
+                  <a href="#" @click.prevent="router.push(item.to)" class="flex items-center justify-between gap-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 -mx-2 px-2 transition-colors">
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ item.label }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ item.detail }}</p>
+                    </div>
+                    <span :class="item.badge" class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-bold">{{ item.count }}</span>
+                  </a>
+                </li>
+              </ul>
             </div>
           </div>
 
@@ -579,17 +594,23 @@ const allInventory = ref([])
 const allPayments = ref([])
 const allStaff = ref([])
 const isLoadingDashboard = ref(false)
+const dashboardError = ref('')
 const myAssignedEvents = ref([]) // Staff role: their own upcoming assigned events
 
 const totalBookings = computed(() => allBookings.value.length)
 
-const activeEventsCount = computed(() =>
-  allBookings.value.filter((b) => ['Pending', 'Confirmed'].includes(b.booking_status)).length
-)
+const countByStatus = (status) => allBookings.value.filter((b) => b.booking_status === status).length
+const pendingCount = computed(() => countByStatus('Pending'))
+const confirmedCount = computed(() => countByStatus('Confirmed'))
+const completedBookingsCount = computed(() => countByStatus('Completed'))
+const cancelledCount = computed(() => countByStatus('Cancelled'))
 
-const completedBookingsCount = computed(() =>
-  allBookings.value.filter((b) => b.booking_status === 'Completed').length
-)
+const bookingStatusRows = computed(() => [
+  { label: 'Pending', count: pendingCount.value, dot: 'bg-amber-400' },
+  { label: 'Confirmed', count: confirmedCount.value, dot: 'bg-emerald-500' },
+  { label: 'Completed', count: completedBookingsCount.value, dot: 'bg-blue-400' },
+  { label: 'Cancelled', count: cancelledCount.value, dot: 'bg-red-400' },
+])
 
 const lowStockCount = computed(() =>
   allInventory.value.filter(isLowStock).length
@@ -599,9 +620,29 @@ const lowStockCount = computed(() =>
 // which were being counted as "Staff On Duty".
 const staffOnDutyCount = computed(() => allStaff.value.filter((u) => u.role === 'Staff' && u.availability === 'Available').length)
 
-const fullyPaidCount = computed(() => allPayments.value.filter((p) => p.payment_status === 'Paid').length)
-const partialCount = computed(() => allPayments.value.filter((p) => p.payment_status === 'Partial').length)
-const unpaidCount = computed(() => allPayments.value.filter((p) => p.payment_status === 'Unpaid').length)
+// Payments of CANCELLED bookings are not money still owed, so leave them out of
+// the paid / partial / unpaid counts and the "to collect" total.
+const livePayments = computed(() => {
+  const status = {}
+  for (const b of allBookings.value) status[b.booking_id] = b.booking_status
+  return allPayments.value.filter((p) => status[p.booking_id] !== 'Cancelled')
+})
+
+const fullyPaidCount = computed(() => livePayments.value.filter((p) => p.payment_status === 'Paid').length)
+const partialCount = computed(() => livePayments.value.filter((p) => p.payment_status === 'Partial').length)
+const unpaidCount = computed(() => livePayments.value.filter((p) => p.payment_status === 'Unpaid').length)
+
+const outstandingTotal = computed(() =>
+  livePayments.value
+    .filter((p) => ['Partial', 'Unpaid'].includes(p.payment_status))
+    .reduce((sum, p) => sum + (Number(p.balance) || 0), 0)
+)
+
+const paymentStatusRows = computed(() => [
+  { label: 'Fully Paid', count: fullyPaidCount.value, dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  { label: 'Partial', count: partialCount.value, dot: 'bg-amber-400', text: 'text-amber-500 dark:text-amber-400' },
+  { label: 'Unpaid', count: unpaidCount.value, dot: 'bg-red-400', text: 'text-red-500 dark:text-red-400' },
+])
 
 const totalRevenue = computed(() =>
   allPayments.value.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
@@ -614,6 +655,77 @@ const recentBookings = computed(() => {
     .slice(0, 5)
 })
 
+function statusPillClass(status) {
+  switch (status) {
+    case 'Confirmed': return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+    case 'Pending': return 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+    case 'Completed': return 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+    case 'Cancelled': return 'bg-red-500/15 text-red-700 dark:text-red-300'
+    default: return 'bg-gray-500/15 text-gray-600 dark:text-gray-300'
+  }
+}
+
+// Next active events, nearest date first.
+const upcomingEvents = computed(() => {
+  const today = localToday()
+  return allBookings.value
+    .filter((b) => ['Pending', 'Confirmed'].includes(b.booking_status) && String(b.event_date).slice(0, 10) >= today)
+    .sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)))
+    .slice(0, 5)
+})
+
+// "Today", "Tomorrow", "in 6 days"
+function daysUntilLabel(dateStr) {
+  if (!dateStr) return ''
+  const diff = Math.round(
+    (new Date(String(dateStr).slice(0, 10) + 'T00:00:00') - new Date(localToday() + 'T00:00:00')) / 86400000
+  )
+  if (diff <= 0) return 'Today'
+  if (diff === 1) return 'Tomorrow'
+  return `in ${diff} days`
+}
+
+// Things the owner should act on. Rows with a zero count are left out.
+const attentionItems = computed(() => {
+  const items = []
+
+  const pending = pendingCount.value
+  if (pending > 0) {
+    items.push({
+      label: 'Bookings waiting for confirmation',
+      detail: 'Review and confirm or decline them',
+      count: pending,
+      to: '/admin/bookings',
+      badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+    })
+  }
+
+  const owing = livePayments.value.filter((p) => ['Partial', 'Unpaid'].includes(p.payment_status))
+  if (owing.length > 0) {
+    items.push({
+      label: 'Payments with a balance',
+      detail: `₱${formatCurrency(outstandingTotal.value)} still to collect`,
+      count: owing.length,
+      to: '/admin/payments',
+      badge: 'bg-red-500/15 text-red-700 dark:text-red-300',
+    })
+  }
+
+  const low = allInventory.value.filter(isLowStock)
+  if (low.length > 0) {
+    const names = low.slice(0, 3).map((i) => i.item_name).join(', ')
+    items.push({
+      label: 'Low stock items',
+      detail: low.length > 3 ? `${names} and ${low.length - 3} more` : names,
+      count: low.length,
+      to: '/admin/inventory',
+      badge: 'bg-red-500/15 text-red-700 dark:text-red-300',
+    })
+  }
+
+  return items
+})
+
 function formatCurrency(value) {
   const num = Number(value) || 0
   return num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -621,7 +733,7 @@ function formatCurrency(value) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', {
+  return new Date(String(dateStr).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-PH', {
     year: 'numeric', month: 'short', day: 'numeric'
   })
 }
@@ -642,6 +754,7 @@ function statusBadgeClass(status) {
 
 async function fetchDashboardData(role) {
   isLoadingDashboard.value = true
+  dashboardError.value = ''
   try {
     if (role === 'Staff') {
       // Staff only has Payments access — just pull revenue — plus their own
@@ -666,6 +779,7 @@ async function fetchDashboardData(role) {
     }
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
+    dashboardError.value = 'Could not load the dashboard data. Please refresh the page.'
   } finally {
     isLoadingDashboard.value = false
   }
@@ -809,7 +923,7 @@ const allNavItems = [
 // Staff (per the manuscript's Use Case Diagram) only has access to
 // Login/Authentication and Manage Payments -- so their sidebar only
 // shows Dashboard (general landing view) and Payments.
-const staffAllowedSections = ['Dashboard', 'Payment Records', 'Support Chat']
+const staffAllowedSections = ['Dashboard', 'Event Planning', 'Payment Records', 'Support Chat']
 
 const navItems = computed(() =>
   userRole.value === 'Staff'

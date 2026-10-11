@@ -424,7 +424,7 @@
               <option value="Staff">Staff</option>
               <option v-if="editUser.role === 'Owner/Manager'" value="Owner/Manager">Owner/Manager</option>
             </select>
-            <p v-if="!canEditRole" class="text-xs text-gray-400 dark:text-gray-500 mt-1">Only an Admin can change roles, and the owner's role is fixed.</p>
+            <p v-if="!canEditRole" class="text-xs text-gray-400 dark:text-gray-500 mt-1">The owner's role is fixed and can't be changed.</p>
           </div>
 
           <div v-if="editUser.role === 'Staff'" class="relative">
@@ -611,7 +611,9 @@ function canManage(u) {
 }
 const canEditRole = computed(() => {
   const target = userList.value.find((u) => u.id === editUser.value.id)
-  return userRole.value === 'Admin' && target?.role !== 'Owner/Manager'
+  // Admin AND Owner/Manager may change roles (matches the database trigger),
+  // but never the owner's own role.
+  return ['Admin', 'Owner/Manager'].includes(userRole.value) && target?.role !== 'Owner/Manager'
 })
 const deleteUserError = ref('')
 

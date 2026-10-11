@@ -4,8 +4,9 @@
   <div class="relative">
     <button
       @click="open = !open"
-      class="relative p-2 rounded-none text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+      class="relative p-2.5 sm:p-2 rounded-none text-gray-300 hover:text-white hover:bg-white/10"
       title="Notifications"
+      :aria-label="totalUnread > 0 ? `Notifications, ${totalUnread} unread` : 'Notifications'"
     >
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -13,7 +14,7 @@
       </svg>
       <span
         v-if="totalUnread > 0"
-        class="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold"
+        class="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold ring-2 ring-gray-900"
       >
         {{ totalUnread > 9 ? '9+' : totalUnread }}
       </span>
@@ -83,6 +84,27 @@
         </button>
       </div>
 
+      <div v-if="licenseAlerts.length" class="border-t border-gray-100 dark:border-gray-700">
+        <div class="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          License Expiry Alerts
+        </div>
+        <button
+          v-for="a in licenseAlerts"
+          :key="a.key"
+          @click="goToCompliance"
+          class="w-full flex items-start gap-3 px-4 py-3 text-left border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          <span
+            class="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
+            :class="a.severity === 'high' ? 'bg-red-500' : 'bg-amber-500'"
+          ></span>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ a.business_name || 'Unnamed business' }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ a.text }}</p>
+          </div>
+        </button>
+      </div>
+
       <div class="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700">
         <button @click="goToPending" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
           View Pending Businesses →
@@ -99,9 +121,9 @@ import { useNotifications } from '../composables/useNotifications'
 
 const router = useRouter()
 const open = ref(false)
-const { pendingBusinesses, pendingBusinessUnreadCount, lifecycleAlerts, lifecycleUnreadCount, loading, markAllRead } = useNotifications()
+const { pendingBusinesses, pendingBusinessUnreadCount, lifecycleAlerts, lifecycleUnreadCount, licenseAlerts, licenseUnreadCount, loading, markAllRead } = useNotifications()
 
-const totalUnread = computed(() => pendingBusinessUnreadCount.value + lifecycleUnreadCount.value)
+const totalUnread = computed(() => pendingBusinessUnreadCount.value + lifecycleUnreadCount.value + licenseUnreadCount.value)
 
 
 function formatDate(v) {
@@ -113,6 +135,11 @@ function goToLifecycle(a) {
   open.value = false
   const lifecycle = a.kind === 'expiring' ? 'Expiring' : a.kind === 'expired' ? 'Expired' : 'Inactive'
   router.push({ path: '/super-admin/dashboard', query: { lifecycle } })
+}
+
+function goToCompliance() {
+  open.value = false
+  router.push({ path: '/super-admin/dashboard', query: { tab: 'Compliance' } })
 }
 
 function goToPending() {

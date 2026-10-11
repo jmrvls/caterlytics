@@ -4,6 +4,7 @@ import { getLowStockItems } from '../services/inventoryService'
 import { getMyAssignedBookings } from '../services/staffassignmentservice'
 import { resetChatUnread } from './useChatUnread'
 import { resetReviewAlerts } from './useReviewAlerts'
+import { daysUntil, isLicenseType } from '../utils/legaldocs'
 
 // Shared, app-wide notification state: low-stock alerts + new booking alerts
 // (Admin/Owner), and event-assignment alerts (Staff).
@@ -34,18 +35,22 @@ const assignmentUnreadCount = ref(0)
 const pendingBusinessUnreadCount = ref(0)
 const lifecycleAlerts = ref([]) // Super-Admin-only: expiring / expired / inactive tenants
 const lifecycleUnreadCount = ref(0)
+const licenseAlerts = ref([]) // expiring / expired licenses (+ the tenant's own subscription for Admin/Owner)
+const licenseUnreadCount = ref(0)
 const unreadCount = ref(0) // combined, for the bell badge
 const seenIds = new Set() // low-stock item ids already "read"
 const seenBookingIds = new Set() // booking ids already "read"
 const seenAssignmentIds = new Set() // booking_ids already "read"
 const seenPendingBusinessIds = new Set() // business_ids already "read"
 const seenLifecycleKeys = new Set() // lifecycle alert keys already "read"
+const seenLicenseKeys = new Set() // license alert keys already "read"
 let stockChannel = null
 let bookingChannel = null
 let assignmentChannel = null
 let pendingBusinessChannel = null
 let pendingBusinessPollTimer = null
 let subscriberCount = 0
+let tenantAlertTimer = null
 
 // The refs/Sets above are module-level (shared app-wide), so they survive
 // logout -> login inside the same tab (SPA, no page reload). Without a reset,
@@ -85,6 +90,19 @@ function saveSeenLifecycle() {
     localStorage.setItem(seenLifecycleStorageKey(), JSON.stringify([...seenLifecycleKeys].slice(-300)))
   } catch { /* ignore quota / private-mode errors */ }
 }
+const seenLicenseStorageKey = () => `caterlytics:seenLicenseAlerts:${currentUserId || 'anon'}`
+function loadSeenLicense() {
+  seenLicenseKeys.clear()
+  try {
+    const raw = JSON.parse(localStorage.getItem(seenLicenseStorageKey()) || '[]')
+    if (Array.isArray(raw)) raw.forEach((k) => seenLicenseKeys.add(k))
+  } catch { /* storage unavailable or corrupted -- start empty */ }
+}
+function saveSeenLicense() {
+  try {
+    localStorage.setItem(seenLicenseStorageKey(), JSON.stringify([...seenLicenseKeys].slice(-300)))
+  } catch { /* ignore quota / private-mode errors */ }
+}
 function resetNotificationState() {
   lowStockItems.value = []
   newBookings.value = []
@@ -96,6 +114,8 @@ function resetNotificationState() {
   pendingBusinessUnreadCount.value = 0
   lifecycleAlerts.value = []
   lifecycleUnreadCount.value = 0
+  licenseAlerts.value = []
+  licenseUnreadCount.value = 0
   unreadCount.value = 0
   loading.value = true
   seenIds.clear()
@@ -103,6 +123,9 @@ function resetNotificationState() {
   seenAssignmentIds.clear()
   seenPendingBusinessIds.clear()
   seenLifecycleKeys.clear()
+  seenLicenseKeys.clear()
+  lastLicenseFetch = 0
+  licenseQueueCache = null
 }
 
 // Call on logout so the next person to log in on this tab starts clean.
@@ -116,6 +139,7 @@ export function resetNotifications() {
 function recomputeUnread() {
   unreadCount.value = stockUnreadCount.value + bookingUnreadCount.value
     + assignmentUnreadCount.value + pendingBusinessUnreadCount.value + lifecycleUnreadCount.value
+    + licenseUnreadCount.value
 }
 
 // Same thresholds as the Tenants tab cards and the daily database job
@@ -165,6 +189,81 @@ function buildLifecycleAlerts(businesses, lifecycle) {
   return alerts.sort((a, c) => order[a.severity] - order[c.severity])
 }
 
+// ---------- License expiry alerts ----------
+// docs: legal documents (Super Admin: every tenant's, from the verification queue;
+// Admin/Owner: their own). Only the LATEST-expiring document of each license type
+// per business counts, so a renewed license silences the alert for the old one.
+// Same 30-day warning window as the Compliance tab.
+function buildLicenseAlerts(docs, { include = () => true } = {}) {
+  const latest = new Map()
+  for (const d of docs || []) {
+    if (!d?.expiry_date || !isLicenseType(d.doc_type)) continue
+    const bid = d.business_id || 'own'
+    if (!include(bid)) continue
+    const k = `${bid}|${d.doc_type}`
+    const cur = latest.get(k)
+    if (!cur || String(d.expiry_date) > String(cur.expiry_date)) latest.set(k, d)
+  }
+  const alerts = []
+  for (const d of latest.values()) {
+    const left = daysUntil(String(d.expiry_date).slice(0, 10))
+    if (left === null || left > EXPIRY_WARN_DAYS) continue
+    const bid = d.business_id || 'own'
+    const base = { business_id: d.business_id || null, business_name: d.business_name || '', doc_type: d.doc_type }
+    if (left < 0) {
+      alerts.push({ ...base, key: `lic-expired:${bid}:${d.doc_type}:${d.expiry_date}`, kind: 'license-expired', severity: 'high',
+        text: `${d.doc_type} expired ${Math.abs(left)} day(s) ago` })
+    } else {
+      const bucket = left <= 0 ? 0 : left <= 1 ? 1 : left <= 3 ? 3 : left <= 7 ? 7 : left <= 14 ? 14 : 30
+      alerts.push({ ...base, key: `lic-expiring:${bid}:${d.doc_type}:${bucket}:${d.expiry_date}`, kind: 'license-expiring',
+        severity: left <= 7 ? 'high' : 'medium',
+        text: left === 0 ? `${d.doc_type} expires today` : `${d.doc_type} expires in ${left} day(s)` })
+    }
+  }
+  const order = { high: 0, medium: 1, low: 2 }
+  return alerts.sort((a, c) => order[a.severity] - order[c.severity])
+}
+
+function setLicenseAlerts(list) {
+  licenseAlerts.value = list
+  licenseUnreadCount.value = list.filter((a) => !seenLicenseKeys.has(a.key)).length
+  recomputeUnread()
+}
+
+// The verification queue covers every tenant, so don't hammer it on the 20s poll.
+let lastLicenseFetch = 0
+let licenseQueueCache = null
+const LICENSE_REFRESH_MS = 5 * 60 * 1000
+
+// Admin/Owner feed: this business's own license expiries + its own subscription.
+// (RLS scopes both calls to the caller's business. Either one failing -- e.g. the
+// SQL scripts were not run -- just means fewer alerts, never an error.)
+export async function refreshTenantAlerts() {
+  try {
+    const [{ getLegalDocuments }, { getMySubscription }] = await Promise.all([
+      import('../services/legalDocumentService'),
+      import('../services/businessservice'),
+    ])
+    const [docs, sub] = await Promise.all([
+      getLegalDocuments().catch(() => []),
+      getMySubscription().catch(() => null),
+    ])
+    const alerts = buildLicenseAlerts(docs)
+    if (sub && Number.isFinite(sub.days_left) && sub.days_left <= EXPIRY_WARN_DAYS) {
+      const left = sub.days_left
+      const bucket = left <= 0 ? 0 : left <= 1 ? 1 : left <= 3 ? 3 : left <= 7 ? 7 : left <= 14 ? 14 : 30
+      alerts.unshift(left < 0
+        ? { key: `sub-expired:${sub.expires_at}`, kind: 'subscription', severity: 'high', business_name: '',
+            text: `Your subscription expired ${Math.abs(left)} day(s) ago. Contact the platform admin to renew.` }
+        : { key: `sub-expiring:${bucket}:${sub.expires_at}`, kind: 'subscription', severity: left <= 7 ? 'high' : 'medium', business_name: '',
+            text: left === 0 ? 'Your subscription expires today.' : `Your subscription expires in ${left} day(s).` })
+    }
+    setLicenseAlerts(alerts)
+  } catch (err) {
+    console.error('Failed to load license/subscription alerts:', err)
+  }
+}
+
 // Super-Admin-only feed: "a new business is waiting for your approval."
 // Polls get_platform_businesses() (a SECURITY DEFINER RPC every Super Admin
 // call can already reach) on an interval AND listens for Realtime inserts on
@@ -182,6 +281,15 @@ export async function refreshPendingBusinesses() {
     // Subscription / inactivity alerts (null = tenant_lifecycle.sql not run yet).
     lifecycleAlerts.value = buildLifecycleAlerts(rows, lifecycle)
     lifecycleUnreadCount.value = lifecycleAlerts.value.filter((a) => !seenLifecycleKeys.has(a.key)).length
+
+    // License expiry alerts across every live tenant (null = license_verification.sql not run yet).
+    if (Date.now() - lastLicenseFetch > LICENSE_REFRESH_MS || !licenseQueueCache) {
+      const { getLicenseQueue } = await import('../services/superAdminService')
+      const queue = await getLicenseQueue()
+      if (queue) { licenseQueueCache = queue; lastLicenseFetch = Date.now() }
+    }
+    const live = new Set(rows.filter((b) => ['Active', 'Suspended'].includes(b.status)).map((b) => b.business_id))
+    setLicenseAlerts(buildLicenseAlerts(licenseQueueCache || [], { include: (id) => live.has(id) }))
     recomputeUnread()
   } catch (err) {
     console.error('Failed to load pending-business notifications:', err)
@@ -283,6 +391,9 @@ function markAllRead() {
   lifecycleAlerts.value.forEach((a) => seenLifecycleKeys.add(a.key))
   saveSeenLifecycle()
   lifecycleUnreadCount.value = 0
+  licenseAlerts.value.forEach((a) => seenLicenseKeys.add(a.key))
+  saveSeenLicense()
+  licenseUnreadCount.value = 0
   recomputeUnread()
 }
 
@@ -313,6 +424,7 @@ export function useNotifications() {
     if (isSuperAdmin) {
       loadSeenPending()
       loadSeenLifecycle()
+      loadSeenLicense()
       newBookings.value = []
       lowStockItems.value = []
       bookingUnreadCount.value = 0
@@ -379,6 +491,11 @@ export function useNotifications() {
 
     refreshStock()
 
+    // License / subscription expiry alerts for this business (Admin / Owner).
+    loadSeenLicense()
+    refreshTenantAlerts()
+    if (!tenantAlertTimer) tenantAlertTimer = setInterval(refreshTenantAlerts, 10 * 60 * 1000)
+
     // Only one Realtime channel of each kind needs to exist app-wide;
     // every component using this composable shares them.
     if (!stockChannel) {
@@ -441,6 +558,10 @@ export function useNotifications() {
         clearInterval(pendingBusinessPollTimer)
         pendingBusinessPollTimer = null
       }
+      if (tenantAlertTimer) {
+        clearInterval(tenantAlertTimer)
+        tenantAlertTimer = null
+      }
     }
   })
 
@@ -456,6 +577,8 @@ export function useNotifications() {
     pendingBusinessUnreadCount,
     lifecycleAlerts,
     lifecycleUnreadCount,
+    licenseAlerts,
+    licenseUnreadCount,
     loading,
     markAllRead,
     refresh: refreshStock,

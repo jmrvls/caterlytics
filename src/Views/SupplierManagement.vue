@@ -540,8 +540,40 @@ onMounted(() => {
   userAvatarUrl.value = user.avatar_url || ''
   todayTimer = setInterval(refreshToday, 60 * 1000)
   document.addEventListener('visibilitychange', refreshToday)
-  loadAll()
+  loadAll().then(applyReorderFromQuery)
 })
+
+// Inventory's "Reorder" button sends us here with ?reorder=<item_id>:<qty>,...
+// Open a new purchase order with those items already filled in. The supplier is
+// the one most of those items are linked to (the user can still change it).
+function applyReorderFromQuery() {
+  const raw = router.currentRoute.value.query.reorder
+  if (!raw) return
+  router.replace({ path: '/admin/suppliers' }) // so a page refresh doesn't reopen it
+
+  const picks = String(raw).split(',')
+    .map((pair) => pair.split(':'))
+    .map(([id, qty]) => ({ item: inventory.value.find((i) => i.item_id === Number(id)), qty: Math.ceil(Number(qty)) }))
+    .filter((p) => p.item && Number.isFinite(p.qty) && p.qty > 0)
+  if (!picks.length) return
+
+  const votes = {}
+  for (const { item } of picks) {
+    if (item.supplier_id && supplierIsActive(item.supplier_id)) votes[item.supplier_id] = (votes[item.supplier_id] || 0) + 1
+  }
+  const best = Object.entries(votes).sort((a, b) => b[1] - a[1])[0]
+
+  tab.value = 'orders'
+  openPoModal(null, best ? Number(best[0]) : '')
+  if (!showPoModal.value) return // no active supplier yet; openPoModal already explained why
+  poForm.value.notes = 'Reorder from Inventory'
+  poForm.value.lines = picks.map(({ item, qty }) => {
+    const line = newLine()
+    pickItem(line, item.item_id)
+    line.quantity = qty
+    return line
+  })
+}
 
 async function loadAll(silent = false) {
   if (!silent) isLoading.value = true

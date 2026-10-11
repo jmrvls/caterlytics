@@ -35,8 +35,8 @@
       <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <span class="font-semibold text-sm text-gray-800 dark:text-gray-100">Notifications</span>
         <button
-          v-if="unreadCount > 0 || announcementUnseenCount > 0"
-          @click="markEverythingRead"
+          v-if="unreadCount > 0"
+          @click="markAllRead"
           class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
         >
           Mark all read
@@ -45,28 +45,24 @@
 
       <div class="max-h-80 overflow-y-auto">
 
-        <!-- Platform announcements from Super Admin -->
-        <div class="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Announcements
-        </div>
-        <div v-if="announcements.length === 0" class="px-4 pb-3 text-sm text-gray-400">
-          No announcements.
-        </div>
-        <div
-          v-for="a in announcements.slice(0, 5)"
-          :key="a.announcement_id"
-          class="flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-700"
-          :class="isUnseen(a) ? 'bg-blue-50/60 dark:bg-blue-900/10' : ''"
-        >
-          <span
-            class="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
-            :class="{ 'bg-blue-500': a.severity === 'info', 'bg-amber-500': a.severity === 'warning', 'bg-red-500': a.severity === 'critical' }"
-          ></span>
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-gray-800 dark:text-gray-100 break-words">{{ a.title }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-line break-words">{{ a.message }}</p>
+        <!-- License & subscription expiry (Admin / Owner) -->
+        <template v-if="licenseAlerts.length">
+          <div class="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+            Licenses &amp; Subscription
           </div>
-        </div>
+          <button
+            v-for="a in licenseAlerts"
+            :key="a.key"
+            @click="goToLicenses(a)"
+            class="w-full flex items-start gap-3 px-4 py-3 text-left border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <span
+              class="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
+              :class="a.severity === 'high' ? 'bg-red-500' : 'bg-amber-500'"
+            ></span>
+            <p class="text-sm text-gray-800 dark:text-gray-100">{{ a.text }}</p>
+          </button>
+        </template>
 
         <!-- New Bookings -->
         <div class="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
@@ -162,23 +158,14 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotifications } from '../composables/useNotifications'
 import { useReviewAlerts } from '../composables/useReviewAlerts'
-import { useAnnouncements } from '../composables/useAnnouncements'
 
 const router = useRouter()
 const open = ref(false)
-const { lowStockItems, newBookings, unreadCount, loading, markAllRead } = useNotifications()
+const { lowStockItems, newBookings, licenseAlerts, unreadCount, loading, markAllRead } = useNotifications()
 // Reviews waiting for a reply are an action item (not "read" by opening the bell),
 // so they count toward the badge until the owner actually replies.
 const { reviewPending } = useReviewAlerts()
-const { announcements, unseen: unseenAnnouncements, unseenCount: announcementUnseenCount, markAllSeen } = useAnnouncements()
-const totalUnread = computed(() => unreadCount.value + reviewPending.value + announcementUnseenCount.value)
-
-const isUnseen = (a) => unseenAnnouncements.value.some((u) => u.announcement_id === a.announcement_id)
-
-function markEverythingRead() {
-  markAllRead()
-  markAllSeen()
-}
+const totalUnread = computed(() => unreadCount.value + reviewPending.value)
 
 const storedUser = (() => {
   try {
@@ -194,6 +181,11 @@ function formatDate(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', {
     month: 'short', day: 'numeric', year: 'numeric'
   })
+}
+
+function goToLicenses(a) {
+  open.value = false
+  router.push(a.kind === 'subscription' ? '/admin/dashboard' : '/admin/legal-documents')
 }
 
 function goToInventory() {

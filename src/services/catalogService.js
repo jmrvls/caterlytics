@@ -223,3 +223,22 @@ export async function setFavoritePackage(packageId, on) {
     if (error) throw new Error('Failed to remove favorite.');
   }
 }
+
+// Payment instructions (GCash / bank details) a caterer posted for its clients,
+// shown under "How to pay" in My Bookings. Best-effort: returns {} if the
+// payment_instructions column hasn't been added yet (ADD_PAYMENT_INSTRUCTIONS.sql),
+// so a missing column can never break the client dashboard.
+export async function getBusinessPaymentInstructions(businessIds) {
+  try {
+    const { data, error } = await supabase
+      .from('tbl_business')
+      .select('business_id, payment_instructions')
+      .in('business_id', businessIds);
+    if (error) return {};
+    const out = {};
+    for (const r of data || []) if (r.payment_instructions) out[r.business_id] = r.payment_instructions;
+    return out;
+  } catch {
+    return {};
+  }
+}

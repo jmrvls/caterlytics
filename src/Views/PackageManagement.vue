@@ -181,58 +181,76 @@
         </div>
 
         <!-- Package Cards -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <div
             v-for="pkg in filteredPackages"
             :key="pkg.package_id"
-            class="bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex flex-col hover:border-emerald-200 dark:hover:border-emerald-700 transition"
+            :class="tierAccent(pkg.package_name).border"
+            class="bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 border-t-4 flex flex-col hover:border-emerald-200 dark:hover:border-emerald-700 transition"
           >
-            <div v-if="pkg.image_url" class="-mx-5 -mt-5 mb-3 h-32 overflow-hidden bg-gray-100 dark:bg-gray-900">
+            <!-- Photo: same height for every card; click to see the whole picture -->
+            <button
+              v-if="pkg.image_url"
+              type="button"
+              @click="lightboxUrl = pkg.image_url"
+              class="group relative block h-44 w-full overflow-hidden bg-gray-100 dark:bg-gray-900"
+              title="Click to view full photo"
+            >
               <img :src="pkg.image_url" :alt="pkg.package_name" class="w-full h-full object-cover" />
-            </div>
+              <span class="absolute bottom-2 right-2 bg-black/60 text-white text-[11px] font-medium px-2 py-1 opacity-0 group-hover:opacity-100 transition">View full photo</span>
+            </button>
 
-            <div class="flex items-start justify-between mb-2">
-              <div v-if="!pkg.image_url" class="w-10 h-10 rounded-none bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+            <div class="p-5 flex flex-col flex-1">
+              <!-- Name + price -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <span :class="tierAccent(pkg.package_name).badge" class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 mb-1.5">Package</span>
+                  <h3 class="font-bold text-lg text-gray-900 dark:text-gray-100 leading-tight">{{ pkg.package_name }}</h3>
+                </div>
+                <div class="text-right shrink-0">
+                  <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 leading-none">₱{{ formatPrice(pkg.price_per_head) }}</p>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium mt-1">per head</p>
+                </div>
               </div>
-              <div v-else></div>
-              <div class="flex items-center gap-1">
-                <button @click="openMenuModal(pkg)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/30" title="Manage menu">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
-                  </svg>
-                </button>
-                <button @click="openIngredientsModal(pkg)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30" title="Manage ingredients">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4" />
-                  </svg>
-                </button>
-                <button @click="openEditModal(pkg)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Edit package">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </button>
-                <button @click="confirmDelete(pkg)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete package">
+
+              <!-- Menu summary: collapsed by default, expands in place -->
+              <div class="mt-4 flex-1">
+                <p
+                  :class="expandedIds.has(pkg.package_id) ? '' : 'line-clamp-5'"
+                  class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line"
+                >{{ pkg.description || 'No description provided.' }}</p>
+                <button
+                  v-if="needsToggle(pkg)"
+                  type="button"
+                  @click="toggleExpanded(pkg.package_id)"
+                  class="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >{{ expandedIds.has(pkg.package_id) ? 'Show less' : 'View full menu' }}</button>
+              </div>
+
+              <!-- Cost (owner info) -->
+              <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                Cost ₱{{ formatPrice(pkg.cost_per_head) }} / head
+              </div>
+
+              <!-- Actions -->
+              <div class="mt-3 flex items-center gap-2">
+                <button @click="openEditModal(pkg)" class="flex-1 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 py-2 transition">Edit</button>
+                <button @click="openMenuModal(pkg)" class="flex-1 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Menu</button>
+                <button @click="openIngredientsModal(pkg)" class="flex-1 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Ingredients</button>
+                <button @click="confirmDelete(pkg)" class="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition" title="Delete package">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               </div>
             </div>
-
-            <h3 class="font-bold text-gray-900 dark:text-gray-100">{{ pkg.package_name }}</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 flex-1 whitespace-pre-line">{{ pkg.description || 'No description provided.' }}</p>
-
-            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-baseline gap-1">
-              <span class="text-xl font-black text-emerald-600 dark:text-emerald-400">₱{{ formatPrice(pkg.price_per_head) }}</span>
-              <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">/ head</span>
-            </div>
-            <div class="mt-2 flex items-center justify-between text-xs">
-              <span class="text-gray-400 dark:text-gray-500">Cost: ₱{{ formatPrice(pkg.cost_per_head) }} / head</span>
-            </div>
           </div>
+        </div>
+
+        <!-- Full photo viewer -->
+        <div v-if="lightboxUrl" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" @click="lightboxUrl = ''">
+          <img :src="lightboxUrl" alt="Package photo" class="max-w-full max-h-full object-contain" @click.stop />
+          <button type="button" class="absolute top-4 right-4 text-white text-3xl leading-none px-3 py-1 hover:text-emerald-300" @click="lightboxUrl = ''" aria-label="Close">&times;</button>
         </div>
 
       </div>
@@ -391,7 +409,7 @@
             <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Package Photo</label>
             <div class="mt-1 flex items-center gap-3">
               <div class="w-20 h-20 rounded-none bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 overflow-hidden flex items-center justify-center flex-shrink-0">
-                <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Package photo" class="w-full h-full object-cover" />
+                <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Package photo" class="w-full h-full object-contain" />
                 <svg v-else class="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 6h16a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2z" />
                 </svg>
@@ -401,6 +419,24 @@
                 {{ imagePreviewUrl ? 'Change Photo' : 'Upload Photo' }}
               </button>
             </div>
+          </div>
+          <!-- More photos (gallery shown to clients under the cover photo) -->
+          <div>
+            <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">More Photos (gallery)</label>
+            <p v-if="!isEditing" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Save the package first, then click Edit to add food and setup photos.</p>
+            <template v-else>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Add real photos of your food and setup. Clients see them under the cover photo (up to {{ MAX_GALLERY }}).</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <div v-for="ph in galleryPhotos" :key="ph.photo_id" class="relative w-16 h-16 border border-gray-300 dark:border-gray-600 overflow-hidden">
+                  <img :src="ph.image_url" alt="Gallery photo" class="w-full h-full object-cover" />
+                  <button type="button" @click="removeGalleryPhoto(ph)" class="absolute top-0 right-0 w-5 h-5 bg-black/70 hover:bg-red-600 text-white text-xs leading-none" aria-label="Remove photo">✕</button>
+                </div>
+                <input ref="galleryInput" type="file" multiple accept="image/png, image/jpeg, image/webp" class="hidden" @change="handleGalleryChange" />
+                <button v-if="galleryPhotos.length < MAX_GALLERY" type="button" @click="galleryInput.click()" :disabled="isUploadingGallery" class="w-16 h-16 border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold disabled:opacity-50">
+                  {{ isUploadingGallery ? '...' : '+ Add' }}
+                </button>
+              </div>
+            </template>
           </div>
           <div>
             <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Package Name</label>
@@ -598,6 +634,7 @@ import {
   setPackageMenu
 } from '../services/packageService'
 import { getAllInventory } from '../services/inventoryService'
+import { getPackagePhotos, uploadPackagePhoto, deletePackagePhoto } from '../services/catalogService'
 import { getMyAddons, createAddon, updateAddon, deleteAddon } from '../services/addonService'
 
 const router = useRouter()
@@ -799,6 +836,48 @@ function handleImageChange(event) {
   imagePreviewUrl.value = URL.createObjectURL(file)
 }
 
+// ---------- Gallery photos (extra photos clients see under the cover) ----------
+const MAX_GALLERY = 8
+const galleryInput = ref(null)
+const galleryPhotos = ref([])
+const isUploadingGallery = ref(false)
+
+async function loadGalleryPhotos(packageId) {
+  galleryPhotos.value = []
+  if (!packageId) return
+  try { galleryPhotos.value = await getPackagePhotos(packageId) } catch (error) { console.error('Failed to load gallery:', error) }
+}
+
+async function handleGalleryChange(event) {
+  const files = Array.from(event.target.files || [])
+  event.target.value = ''
+  if (!files.length || !editingId.value) return
+  modalError.value = ''
+  isUploadingGallery.value = true
+  try {
+    for (const file of files.slice(0, MAX_GALLERY - galleryPhotos.value.length)) {
+      const fileProblem = validateImageFile(file)
+      if (fileProblem) { modalError.value = fileProblem; continue }
+      const row = await uploadPackagePhoto(currentUserId.value, editingId.value, file)
+      galleryPhotos.value = [...galleryPhotos.value, row]
+    }
+  } catch (error) {
+    modalError.value = error?.message || 'Failed to upload photo.'
+  } finally {
+    isUploadingGallery.value = false
+  }
+}
+
+async function removeGalleryPhoto(photo) {
+  modalError.value = ''
+  try {
+    await deletePackagePhoto(photo.photo_id)
+    galleryPhotos.value = galleryPhotos.value.filter((p) => p.photo_id !== photo.photo_id)
+  } catch (error) {
+    modalError.value = error?.message || 'Failed to delete photo.'
+  }
+}
+
 onMounted(() => {
   const storedUser = sessionStorage.getItem('user')
   if (!storedUser) {
@@ -852,6 +931,33 @@ const filteredPackages = computed(() => {
   )
 })
 
+// ---------- Package card helpers ----------
+const expandedIds = ref(new Set())
+const lightboxUrl = ref('')
+
+function toggleExpanded(id) {
+  const next = new Set(expandedIds.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  expandedIds.value = next
+}
+
+// Show the "View full menu" toggle only when the text is actually long.
+function needsToggle(pkg) {
+  const text = pkg.description || ''
+  return text.split('\n').length > 5 || text.length > 220
+}
+
+// Small colour accent per tier name (falls back to emerald for custom names).
+function tierAccent(name) {
+  const n = String(name || '').toLowerCase()
+  if (n.includes('silver')) return { border: 'border-t-gray-400', badge: 'bg-gray-400/20 text-gray-600 dark:text-gray-300' }
+  if (n.includes('gold')) return { border: 'border-t-amber-400', badge: 'bg-amber-400/20 text-amber-700 dark:text-amber-300' }
+  if (n.includes('platinum')) return { border: 'border-t-sky-400', badge: 'bg-sky-400/20 text-sky-700 dark:text-sky-300' }
+  if (n.includes('diamond')) return { border: 'border-t-violet-400', badge: 'bg-violet-400/20 text-violet-700 dark:text-violet-300' }
+  return { border: 'border-t-emerald-500', badge: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' }
+}
+
 function formatPrice(value) {
   const num = Number(value) || 0
   return num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -864,6 +970,7 @@ function openCreateModal() {
   modalError.value = ''
   selectedImageFile.value = null
   imagePreviewUrl.value = ''
+  galleryPhotos.value = []
   showFormModal.value = true
 }
 
@@ -881,6 +988,7 @@ function openEditModal(pkg) {
   modalError.value = ''
   selectedImageFile.value = null
   imagePreviewUrl.value = pkg.image_url || ''
+  loadGalleryPhotos(pkg.package_id)
   showFormModal.value = true
 }
 

@@ -1,6 +1,8 @@
 import { reactive } from 'vue';
 import { supabase } from '../supabaseClient';
 import { cleanItemForm, isLowStock, roundQty } from '../utils/inventory';
+import { getBookingsPage } from './bookingService';
+import { getKitchenPrepList } from './kitchenservice';
 
 // Turns a Supabase/Postgres error into an Error whose .message is safe to show.
 // (The old code threw raw errors, and the view read `error.response.data.error`
@@ -239,4 +241,78 @@ export async function getLowStockItems() {
 
   if (error) throw friendly(error, 'Failed to load low-stock items.');
   return (data || []).filter(isLowStock);
+}
+
+// When each item's stock last changed (newest movement), for the "updated 3d ago"
+// hint. Best effort: returns {} if the history table isn't available.
+export async function getLastMovementDates() {
+  const { data, error } = await supabase
+    .from('tbl_inventory_movements')
+    .select('item_id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(2000);
+
+  if (error) return {};
+  const last = {};
+  for (const m of data || []) {
+    if (!(m.item_id in last)) last[m.item_id] = m.created_at;
+  }
+  return last;
+}
+
+// What the UPCOMING PENDING events still need from the storeroom.
+//
+// Only Pending bookings count: a Confirmed booking has already had its
+// ingredients deducted from stock (see confirm_booking_with_stock_check), so
+// counting it again would double count. The numbers come from the same
+// get_kitchen_prep_list() function the kitchen uses, so they always match.
+//
+// Events are processed soonest-first and each one "uses up" stock, so if two
+// events compete for the same Beef the later one is the one flagged short.
+export async function getUpcomingNeeds({ limit = 20 } = {}) {
+  const { rows, total } = await getBookingsPage({ status: 'Pending', when: 'upcoming', limit });
+
+  const settled = await Promise.allSettled(rows.map((b) => getKitchenPrepList(b.booking_id)));
+
+  const remaining = new Map(); // item_id -> stock left after earlier events
+  const perItem = new Map();   // item_id -> { item_id, name, unit, needed, in_stock }
+  const events = [];
+  let failed = 0;
+
+  settled.forEach((res, idx) => {
+    const b = rows[idx];
+    if (res.status !== 'fulfilled') { failed += 1; return; }
+    const totals = res.value.totals || [];
+
+    const lines = totals.map((t) => {
+      const needed = Number(t.total) || 0;
+      const inStock = Number(t.in_stock) || 0;
+      if (!remaining.has(t.item_id)) remaining.set(t.item_id, inStock);
+      const left = remaining.get(t.item_id);
+      remaining.set(t.item_id, left - needed);
+
+      const agg = perItem.get(t.item_id) || { item_id: t.item_id, name: t.name, unit: t.unit, needed: 0, in_stock: inStock };
+      agg.needed += needed;
+      perItem.set(t.item_id, agg);
+
+      return { item_id: t.item_id, name: t.name, unit: t.unit, needed, short_by: Math.max(0, needed - Math.max(0, left)) };
+    });
+
+    events.push({
+      booking_id: b.booking_id,
+      client_name: b.client_name,
+      event_date: b.event_date,
+      guest_count: b.guest_count,
+      package_name: b.package_name,
+      hasRecipe: lines.length > 0,
+      lines,
+      shortLines: lines.filter((l) => l.short_by > 0),
+    });
+  });
+
+  const items = [...perItem.values()]
+    .map((i) => ({ ...i, short_by: Math.max(0, i.needed - i.in_stock) }))
+    .sort((a, b) => (b.short_by > 0) - (a.short_by > 0) || a.name.localeCompare(b.name));
+
+  return { events, items, failed, totalPending: total, shown: rows.length };
 }

@@ -13,7 +13,7 @@
       </p>
 
       <div v-if="!sessionReady && !checkingSession" class="text-red-600 text-sm font-medium mb-4">
-        This reset link is invalid or has expired. Please request a new one.
+        This link is invalid or has expired. If you were invited as a staff member, ask your Admin/Owner to delete and re-add your account to send a new invitation. If you're resetting a password, request a new link below.
       </div>
 
       <div v-if="errorMessage" class="text-red-600 text-sm font-medium mb-4">

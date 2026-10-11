@@ -27,12 +27,19 @@ export async function getAllBookings() {
 // Order: newest event date first, so upcoming events are on page 1 instead of
 // years of past Completed/Cancelled bookings. `booking_id` is a tiebreaker:
 // without it, rows sharing a date can repeat or vanish between pages.
-export async function getBookingsPage({ offset = 0, limit = 50, status = '', search = '' } = {}) {
+// `when`: 'upcoming' = today onward, soonest first (what the admin needs to act on)
+//         'past'     = before today, most recent first
+//         'all'      = everything, newest event date first
+export async function getBookingsPage({ offset = 0, limit = 50, status = '', search = '', when = 'all' } = {}) {
   let query = supabase
     .from('tbl_bookings')
     .select('*', { count: 'exact' });
 
   if (status) query = query.eq('booking_status', status);
+
+  const today = localToday();
+  if (when === 'upcoming') query = query.gte('event_date', today);
+  else if (when === 'past') query = query.lt('event_date', today);
 
   // Strip characters that have meaning inside a PostgREST .or() filter.
   const term = String(search || '').replace(/[%,()*\\]/g, ' ').trim();
@@ -40,9 +47,10 @@ export async function getBookingsPage({ offset = 0, limit = 50, status = '', sea
     query = query.or(`client_name.ilike.%${term}%,client_contact_number.ilike.%${term}%`);
   }
 
+  const ascending = when === 'upcoming';
   const { data, error, count } = await query
-    .order('event_date', { ascending: false })
-    .order('booking_id', { ascending: false })
+    .order('event_date', { ascending })
+    .order('booking_id', { ascending })
     .range(offset, offset + limit - 1);
 
   if (error) throw error;
@@ -204,6 +212,20 @@ export async function updateBookingStatus(id, status) {
   // this stops a booking from skipping straight to Completed without them.
   if (status === 'Completed' && currentBooking.booking_status !== 'Confirmed' && currentBooking.booking_status !== 'Completed') {
     throw new Error('Only a Confirmed booking can be marked Completed. Confirm it first (the menu must be complete).');
+  }
+
+  // A future event cannot be Completed yet. Also enforced in the UI; this
+  // stops it from being bypassed.
+  if (status === 'Completed' && currentBooking.booking_status !== 'Completed') {
+    const { data: dateRow, error: dateError } = await supabase
+      .from('tbl_bookings')
+      .select('event_date')
+      .eq('booking_id', id)
+      .single();
+    if (dateError) throw dateError;
+    if (dateRow.event_date > localToday()) {
+      throw new Error('This event has not happened yet. You can mark it Completed on or after the event date.');
+    }
   }
 
   // Confirming: stock availability must be checked and deducted atomically

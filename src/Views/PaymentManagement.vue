@@ -802,7 +802,7 @@ const allNavItems = [
 // Staff (per the manuscript's Use Case Diagram) only has access to
 // Login/Authentication and Manage Payments -- so their sidebar only
 // shows Dashboard (general landing view) and Payments.
-const staffAllowedSections = ['Dashboard', 'Payment Records', 'Support Chat']
+const staffAllowedSections = ['Dashboard', 'Event Planning', 'Payment Records', 'Support Chat']
 
 const navItems = computed(() =>
   userRole.value === 'Staff'

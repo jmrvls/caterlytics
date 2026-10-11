@@ -142,7 +142,7 @@
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Search by client name..."
+                placeholder="Search by client name or mobile number..."
                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
               />
             </div>
@@ -160,15 +160,36 @@
             </div>
           </div>
 
-          <!-- Filter -->
-          <div class="flex flex-col sm:flex-row gap-2">
-            <select v-model="statusFilter" class="py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
-              <option value="">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
+          <!-- Filters: status tabs (with counts) + when -->
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
+            <div class="flex gap-1 overflow-x-auto -mx-1 px-1" role="tablist" aria-label="Filter by status">
+              <button
+                v-for="tab in statusTabs" :key="tab.value"
+                type="button" role="tab"
+                :aria-selected="statusFilter === tab.value"
+                @click="statusFilter = tab.value"
+                :class="statusFilter === tab.value
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'"
+                class="flex items-center gap-1.5 px-3 py-2 border text-sm font-semibold whitespace-nowrap transition"
+              >
+                {{ tab.label }}
+                <span :class="statusFilter === tab.value ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700'" class="min-w-[20px] px-1.5 text-[11px] leading-5 text-center">{{ tab.count }}</span>
+              </button>
+            </div>
+
+            <div class="flex gap-1" role="tablist" aria-label="Filter by event date">
+              <button
+                v-for="w in whenOptions" :key="w.value"
+                type="button" role="tab"
+                :aria-selected="whenFilter === w.value"
+                @click="whenFilter = w.value"
+                :class="whenFilter === w.value
+                  ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-emerald-500'"
+                class="px-3 py-2 border text-sm font-semibold whitespace-nowrap transition"
+              >{{ w.label }}</button>
+            </div>
           </div>
         </div>
 
@@ -221,6 +242,7 @@
                 <p class="font-semibold text-gray-900 dark:text-gray-100 truncate capitalize">{{ b.client_name }}</p>
                 <a v-if="b.client_contact_number" :href="'tel:' + b.client_contact_number" class="block text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">{{ b.client_contact_number }}</a>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ formatDate(b.event_date) }} · {{ formatTime(b.event_time) }}</p>
+                <p v-if="relativeDay(b)" :class="relativeDay(b).class" class="text-xs font-semibold mt-0.5">{{ relativeDay(b).text }}</p>
               </div>
               <span :class="statusBadgeClass(b.booking_status)" class="shrink-0 text-xs font-semibold leading-5">
                 {{ b.booking_status }}
@@ -278,16 +300,6 @@
                 </svg>
               </button>
               <button
-                v-if="b.booking_status === 'Confirmed'"
-                @click="handleResendSms(b)"
-                class="w-11 h-11 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 active:bg-emerald-50 dark:active:bg-emerald-900/30 active:text-emerald-600"
-                title="Resend confirmation SMS"
-              >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-              </button>
-              <button
                 @click="confirmDelete(b)"
                 class="w-11 h-11 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 active:bg-red-50 dark:active:bg-red-900/30 active:text-red-600"
                 title="Delete booking"
@@ -317,16 +329,15 @@
                   <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Location</th>
                   <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Package</th>
                   <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Staff</th>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Status</th>
                   <th class="text-right px-2 2xl:px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 <tr v-if="isLoading">
-                  <td colspan="7" class="text-center py-10 text-gray-400 dark:text-gray-500">Loading bookings...</td>
+                  <td colspan="6" class="text-center py-10 text-gray-400 dark:text-gray-500">Loading bookings...</td>
                 </tr>
                 <tr v-else-if="filteredBookings.length === 0">
-                  <td colspan="7" class="text-center py-10 text-gray-400 dark:text-gray-500">
+                  <td colspan="6" class="text-center py-10 text-gray-400 dark:text-gray-500">
                     {{ !hasActiveFilters ? 'No bookings yet. Click "New Booking" to create one.' : 'No bookings match your filters.' }}
                   </td>
                 </tr>
@@ -339,6 +350,7 @@
                   <td class="px-2 2xl:px-4 py-3.5 whitespace-nowrap">
                     <div class="text-gray-800 dark:text-gray-100">{{ formatDate(b.event_date) }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(b.event_time) }}</div>
+                    <div v-if="relativeDay(b)" :class="relativeDay(b).class" class="text-xs font-semibold mt-0.5">{{ relativeDay(b).text }}</div>
                   </td>
                   <td class="px-2 2xl:px-4 py-3.5 text-gray-600 dark:text-gray-300 max-w-[8rem] 2xl:max-w-[14rem] truncate capitalize" :title="b.event_location">{{ b.event_location }}</td>
                   <td class="px-2 2xl:px-4 py-3.5 text-gray-600 dark:text-gray-300">
@@ -364,17 +376,13 @@
                       </span>
                     </div>
                   </td>
-                  <td class="px-2 2xl:px-4 py-3.5">
-                    <span :class="statusBadgeClass(b.booking_status)" class="inline-block text-xs font-semibold leading-5 whitespace-nowrap">
-                      {{ b.booking_status }}
-                    </span>
-                  </td>
                   <td class="px-2 2xl:px-4 py-3">
                     <div class="flex items-center justify-end gap-1.5">
                       <select
                         :value="b.booking_status"
                         @change="requestStatusChange(b, $event)"
-                        class="text-xs border border-gray-200 dark:border-gray-700 rounded-none px-2 py-1.5 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+                        :class="statusBadgeClass(b.booking_status)"
+                        class="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-none px-2 py-1.5 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       >
                         <option value="Pending">Pending</option>
                         <option value="Confirmed">Confirmed</option>
@@ -384,11 +392,6 @@
                       <button @click="openAssignModal(b)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30" title="Assign staff">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" />
-                        </svg>
-                      </button>
-                      <button v-if="b.booking_status === 'Confirmed'" @click="handleResendSms(b)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Resend confirmation SMS">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                         </svg>
                       </button>
                       <button @click="confirmDelete(b)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete booking">
@@ -646,7 +649,6 @@ import {
   getSelectionsForBookings
 } from '../services/bookingService'
 import { getAllPackages, getPackageMenu, getAllMenuItems } from '../services/packageService'
-import { sendBookingConfirmationSms, resendBookingConfirmationSms, sendBookingCancellationSms } from '../services/smsService'
 import {
   getAssignableStaff,
   getAssignedStaff,
@@ -710,6 +712,13 @@ const hasMoreBookings = computed(() => bookings.value.length < totalBookings.val
 
 const searchQuery = ref('')
 const statusFilter = ref('')
+const whenFilter = ref('upcoming') // 'upcoming' | 'past' | 'all'
+
+const whenOptions = [
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'past', label: 'Past' },
+  { value: 'all', label: 'All dates' }
+]
 
 const showCreateModal = ref(false)
 const isCreating = ref(false)
@@ -837,7 +846,8 @@ async function fetchBookings({ refreshCounts = true } = {}) {
         offset: 0,
         limit: PAGE_SIZE,
         status: statusFilter.value,
-        search: searchQuery.value
+        search: searchQuery.value,
+        when: whenFilter.value
       }),
       refreshCounts ? getBookingStatusCounts() : Promise.resolve(null)
     ])
@@ -865,7 +875,8 @@ async function loadMoreBookings() {
       offset: bookings.value.length,
       limit: PAGE_SIZE,
       status: statusFilter.value,
-      search: searchQuery.value
+      search: searchQuery.value,
+      when: whenFilter.value
     })
     if (seq !== fetchSeq) return // filters changed while loading; drop this page
     bookings.value = [...bookings.value, ...page.rows]
@@ -883,7 +894,7 @@ async function loadMoreBookings() {
 // Status dropdown: refetch right away. Search box: wait for a pause in typing.
 // The status counts don't depend on the filters, so they aren't re-queried.
 let searchTimer = null
-watch(statusFilter, () => fetchBookings({ refreshCounts: false }))
+watch([statusFilter, whenFilter], () => fetchBookings({ refreshCounts: false }))
 watch(searchQuery, () => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => fetchBookings({ refreshCounts: false }), 300)
@@ -928,7 +939,30 @@ async function loadAssignedStaffFor(rows) {
 // Filtering/search happen in the query (see getBookingsPage), so the loaded
 // rows are already exactly what should be shown.
 const filteredBookings = computed(() => bookings.value)
-const hasActiveFilters = computed(() => Boolean(statusFilter.value || searchQuery.value.trim()))
+const hasActiveFilters = computed(() => Boolean(statusFilter.value || searchQuery.value.trim() || whenFilter.value !== 'all'))
+
+const statusTabs = computed(() => {
+  const statuses = ['Pending', 'Confirmed', 'Completed', 'Cancelled']
+  const all = statuses.reduce((sum, st) => sum + countByStatus(st), 0)
+  return [
+    { value: '', label: 'All', count: all },
+    ...statuses.map((st) => ({ value: st, label: st, count: countByStatus(st) }))
+  ]
+})
+
+// "Today", "Tomorrow", "in 6 days" for active bookings, so the admin can see
+// what is coming up without doing date math. Hidden once a booking is done.
+function relativeDay(b) {
+  if (!b.event_date || ['Completed', 'Cancelled'].includes(b.booking_status)) return null
+  const today = new Date(localToday() + 'T00:00:00')
+  const event = new Date(b.event_date + 'T00:00:00')
+  const days = Math.round((event - today) / 86400000)
+  if (days < 0) return { text: `${-days} day${days === -1 ? '' : 's'} overdue`, class: 'text-red-600 dark:text-red-400' }
+  if (days === 0) return { text: 'Today', class: 'text-red-600 dark:text-red-400' }
+  if (days === 1) return { text: 'Tomorrow', class: 'text-amber-600 dark:text-amber-400' }
+  if (days <= 7) return { text: `in ${days} days`, class: 'text-amber-600 dark:text-amber-400' }
+  return { text: `in ${days} days`, class: 'text-gray-400 dark:text-gray-500' }
+}
 
 function countByStatus(status) {
   return statusCounts.value[status] || 0
@@ -1129,6 +1163,13 @@ async function requestStatusChange(booking, event) {
   const previousStatus = booking.booking_status
   if (newStatus === previousStatus) return
 
+  // An event that hasn't happened yet can't be Completed.
+  if (newStatus === 'Completed' && booking.event_date > localToday()) {
+    event.target.value = previousStatus // snap the dropdown back
+    pageError.value = `${booking.client_name || 'This booking'}'s event is on ${formatDate(booking.event_date)}. You can mark it Completed on or after that date.`
+    return
+  }
+
   const returnsStock =
     ['Confirmed', 'Completed'].includes(previousStatus) && ['Pending', 'Cancelled'].includes(newStatus)
   if (!returnsStock) {
@@ -1147,16 +1188,6 @@ function confirmRevert() {
   handleStatusChange(booking, newStatus)
 }
 
-async function handleResendSms(booking) {
-  pageError.value = ''
-  const res = await resendBookingConfirmationSms(booking.booking_id)
-  if (res && res.sent) {
-    showStockNotice(`Confirmation SMS sent to ${booking.client_name || 'the client'}.`)
-  } else {
-    pageError.value = `SMS not sent: ${res?.message || 'unknown error.'}`
-  }
-}
-
 async function handleStatusChange(booking, newStatus) {
   const previousStatus = booking.booking_status
   pageError.value = '' // drop any stale error from a previous attempt
@@ -1168,12 +1199,6 @@ async function handleStatusChange(booking, newStatus) {
   try {
     await updateBookingStatus(booking.booking_id, newStatus)
     if (newStatus === 'Confirmed') {
-      // no await: SMS must never block the UI, but tell the admin if it didn't go out
-      sendBookingConfirmationSms(booking.booking_id).then((res) => {
-        if (res && res.sent === false && res.reason !== 'already_sent') {
-          pageError.value = `Booking confirmed, but the SMS was not sent: ${res.message || 'unknown error.'}`
-        }
-      })
       const deducted = await getBookingStockCount(booking.booking_id)
       showStockNotice(
         deducted
@@ -1182,14 +1207,6 @@ async function handleStatusChange(booking, newStatus) {
       )
     } else if (countBefore) {
       showStockNotice(`${countBefore} item(s) returned to inventory.`)
-    }
-    if (newStatus === 'Cancelled' && previousStatus !== 'Cancelled') {
-      // no await: SMS must never block the UI, but tell the admin if it didn't go out
-      sendBookingCancellationSms(booking.booking_id, previousStatus).then((res) => {
-        if (res && res.sent === false) {
-          pageError.value = `Booking cancelled, but the SMS was not sent: ${res.message || 'unknown error.'}`
-        }
-      })
     }
     statusCounts.value = {
       ...statusCounts.value,
