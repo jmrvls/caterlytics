@@ -151,6 +151,16 @@
               <div class="hidden lg:block">
                 <NotificationBell />
               </div>
+              <button
+                type="button"
+                @click="openCalendar"
+                class="flex items-center justify-center gap-2 border border-emerald-600 text-emerald-700 dark:text-emerald-300 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition whitespace-nowrap"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Calendar
+              </button>
               <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -558,6 +568,88 @@
       </div>
     </div>
 
+    <!-- ============ BOOKINGS CALENDAR MODAL ============ -->
+    <div v-if="showCalendar" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4" @click.self="closeCalendar">
+      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-5xl p-4 sm:p-6 max-h-[95vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Booked Events</h3>
+          <button type="button" @click="closeCalendar" aria-label="Close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-1">
+            <button type="button" @click="calendarPrev" aria-label="Previous month" class="w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&lsaquo;</button>
+            <p class="min-w-[9rem] text-center text-sm font-bold text-gray-800 dark:text-gray-100">{{ calendarMonthLabel }}</p>
+            <button type="button" @click="calendarNext" aria-label="Next month" class="w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&rsaquo;</button>
+            <button type="button" @click="calendarToday" class="ml-2 px-3 h-9 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-emerald-500">Today</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-amber-500"></span>Pending</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-emerald-600"></span>Confirmed</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-blue-600"></span>Completed</span>
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" v-model="calendarShowCancelled" class="rounded-none" />Show cancelled</label>
+          </div>
+        </div>
+
+        <div v-if="calendarError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-3">{{ calendarError }}</div>
+
+        <div class="grid grid-cols-7 border-l border-t border-gray-200 dark:border-gray-700">
+          <div v-for="d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']" :key="d" class="border-r border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-center text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 py-1.5">{{ d }}</div>
+          <button
+            v-for="(cell, idx) in calendarCells" :key="idx"
+            type="button"
+            :disabled="!cell"
+            @click="cell && (calendarSelected = cell.date)"
+            :class="[
+              !cell ? 'bg-gray-50/50 dark:bg-gray-900/40' : 'hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20',
+              cell && cell.date === calendarSelected ? 'ring-2 ring-inset ring-emerald-500' : ''
+            ]"
+            class="border-r border-b border-gray-200 dark:border-gray-700 min-h-[56px] sm:min-h-[88px] p-1 text-left align-top flex flex-col gap-0.5"
+          >
+            <template v-if="cell">
+              <span :class="cell.date === todayStr ? 'bg-emerald-600 text-white' : 'text-gray-700 dark:text-gray-200'" class="w-5 h-5 text-[11px] font-semibold flex items-center justify-center rounded-full">{{ cell.day }}</span>
+              <!-- phones: dots + count -->
+              <div v-if="cell.items.length" class="sm:hidden flex flex-wrap gap-0.5 mt-0.5">
+                <span v-for="b in cell.items.slice(0, 4)" :key="b.booking_id" :class="calendarDot(b.booking_status)" class="w-2 h-2 rounded-full"></span>
+                <span v-if="cell.items.length > 4" class="text-[9px] text-gray-500">+{{ cell.items.length - 4 }}</span>
+              </div>
+              <!-- larger screens: event chips -->
+              <div class="hidden sm:flex flex-col gap-0.5 w-full">
+                <span
+                  v-for="b in cell.items.slice(0, 2)" :key="b.booking_id"
+                  :class="[calendarChip(b.booking_status), b.booking_status === 'Cancelled' ? 'line-through' : '']"
+                  class="block truncate px-1 py-0.5 text-[11px] font-semibold text-white capitalize"
+                  :title="b.client_name"
+                >{{ formatTime(b.event_time) }} {{ b.client_name }}</span>
+                <span v-if="cell.items.length > 2" class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">+{{ cell.items.length - 2 }} more</span>
+              </div>
+            </template>
+          </button>
+        </div>
+
+        <p v-if="isLoadingCalendar" class="text-xs text-gray-400 dark:text-gray-500 mt-2">Loading…</p>
+
+        <!-- Selected day details -->
+        <div class="mt-4">
+          <p class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">{{ calendarSelected ? formatDate(calendarSelected) : 'Pick a day' }}</p>
+          <p v-if="calendarSelected && calendarSelectedItems.length === 0" class="text-sm text-gray-400 dark:text-gray-500">No events booked on this day.</p>
+          <div class="space-y-2">
+            <div v-for="b in calendarSelectedItems" :key="b.booking_id" class="border border-gray-200 dark:border-gray-700 p-3 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <div class="min-w-0 text-sm">
+                <p class="font-semibold text-gray-900 dark:text-gray-100 capitalize">{{ b.client_name }} <span class="font-normal text-gray-500 dark:text-gray-400">· {{ formatTime(b.event_time) }}</span></p>
+                <p class="text-gray-600 dark:text-gray-300 capitalize">{{ b.event_location }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ b.guest_count }} guests · {{ b.package_name || 'No package' }}<template v-if="b.client_contact_number"> · {{ b.client_contact_number }}</template></p>
+                <p v-if="assignedStaffNames(b.booking_id).length" class="text-xs text-gray-500 dark:text-gray-400">Staff: {{ assignedStaffNames(b.booking_id).join(', ') }}</p>
+              </div>
+              <span :class="statusBadgeClass(b.booking_status)" class="shrink-0 text-xs font-semibold">{{ b.booking_status }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ DELETE CONFIRM MODAL ============ -->
     <div v-if="bookingToDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-sm p-6">
@@ -627,7 +719,7 @@
 </template>
 
 <script setup>
-import { localToday } from '../utils/date'
+import { localToday, toLocalDateStr } from '../utils/date'
 import { logoutUser } from '../services/authService'
 import { resetNotifications } from '../composables/useNotifications'
 import logoUrl from '../Assets/logofinal.png'
@@ -639,6 +731,7 @@ import { useReviewAlerts } from '../composables/useReviewAlerts'
 import { useRouter } from 'vue-router'
 import {
   getBookingsPage,
+  getBookingsInRange,
   getBookingStatusCounts,
   createBooking,
   updateBookingStatus,
@@ -985,6 +1078,93 @@ function formatDate(dateStr) {
     year: 'numeric', month: 'short', day: 'numeric'
   })
 }
+
+// ---------- Bookings calendar (button in the header) ----------
+const showCalendar = ref(false)
+const calendarMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const calendarBookings = ref([])
+const calendarSelected = ref('')
+const calendarShowCancelled = ref(false)
+const calendarError = ref('')
+const isLoadingCalendar = ref(false)
+let calendarSeq = 0
+
+const calendarMonthLabel = computed(() =>
+  calendarMonth.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+)
+
+const calendarVisible = computed(() =>
+  calendarBookings.value.filter((b) => calendarShowCancelled.value || b.booking_status !== 'Cancelled')
+)
+
+const calendarCells = computed(() => {
+  const first = calendarMonth.value
+  const y = first.getFullYear()
+  const m = first.getMonth()
+  const daysInMonth = new Date(y, m + 1, 0).getDate()
+  const byDate = {}
+  for (const b of calendarVisible.value) (byDate[b.event_date] ||= []).push(b)
+  const cells = Array(first.getDay()).fill(null)
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = toLocalDateStr(new Date(y, m, d))
+    cells.push({ day: d, date, items: byDate[date] || [] })
+  }
+  while (cells.length % 7 !== 0) cells.push(null)
+  return cells
+})
+
+const calendarSelectedItems = computed(() =>
+  calendarVisible.value.filter((b) => b.event_date === calendarSelected.value)
+)
+
+function calendarChip(status) {
+  return { Pending: 'bg-amber-500', Confirmed: 'bg-emerald-600', Completed: 'bg-blue-600', Cancelled: 'bg-red-500' }[status] || 'bg-gray-500'
+}
+function calendarDot(status) { return calendarChip(status) }
+
+async function loadCalendarMonth() {
+  const seq = ++calendarSeq // only the latest request may write results
+  const y = calendarMonth.value.getFullYear()
+  const m = calendarMonth.value.getMonth()
+  isLoadingCalendar.value = true
+  calendarError.value = ''
+  try {
+    const rows = await getBookingsInRange(
+      toLocalDateStr(new Date(y, m, 1)),
+      toLocalDateStr(new Date(y, m + 1, 0))
+    )
+    if (seq !== calendarSeq) return
+    calendarBookings.value = rows
+    loadAssignedStaffFor(rows)
+  } catch (error) {
+    if (seq !== calendarSeq) return
+    console.error('Failed to load calendar bookings:', error)
+    calendarError.value = "Couldn't load the bookings for this month. Please try again."
+  } finally {
+    if (seq === calendarSeq) isLoadingCalendar.value = false
+  }
+}
+
+function openCalendar() {
+  showCalendar.value = true
+  calendarSelected.value = todayStr
+  calendarMonth.value = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  loadCalendarMonth()
+}
+function closeCalendar() { showCalendar.value = false }
+function calendarPrev() {
+  const d = calendarMonth.value
+  calendarMonth.value = new Date(d.getFullYear(), d.getMonth() - 1, 1)
+  calendarSelected.value = ''
+  loadCalendarMonth()
+}
+function calendarNext() {
+  const d = calendarMonth.value
+  calendarMonth.value = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  calendarSelected.value = ''
+  loadCalendarMonth()
+}
+function calendarToday() { openCalendar() }
 
 function assignedStaffNames(bookingId) {
   return (assignedStaffByBooking.value[bookingId] || []).map((s) => s.full_name)

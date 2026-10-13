@@ -547,6 +547,22 @@ export async function getSelectionsForBookings(bookingIds) {
 // Replace the client's menu picks for a booking, atomically, with the
 // per-category limits enforced server-side (set_booking_selected_items).
 // selections = [{ item_id, portion? }, ...]  (portion: 'Small' | 'Regular' | 'Large', default 'Regular')
+// Every booking whose event falls between two dates (inclusive), for the admin
+// calendar view. RLS already limits what an admin can see to their own business.
+export async function getBookingsInRange(startDate, endDate) {
+  const { data, error } = await supabase
+    .from('tbl_bookings')
+    .select('*')
+    .gte('event_date', startDate)
+    .lte('event_date', endDate)
+    .order('event_date', { ascending: true })
+    .order('event_time', { ascending: true })
+    .limit(1000);
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function setBookingSelections(bookingId, selections) {
   const { data, error } = await supabase.rpc('set_booking_selected_items', {
     p_booking_id: bookingId,
