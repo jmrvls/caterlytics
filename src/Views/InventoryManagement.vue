@@ -151,11 +151,11 @@
             <div class="hidden lg:block">
               <NotificationBell />
             </div>
-            <button @click="exportCsv" :disabled="!filteredItems.length" class="hidden sm:flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap" title="Download the list below as a CSV file">
+            <button @click="exportPdf" :disabled="!filteredItems.length" class="hidden sm:flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap" title="Download the list below as a PDF file">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
               </svg>
-              Export CSV
+              Export PDF
             </button>
             <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -674,6 +674,8 @@ import {
 } from '../services/inventoryService'
 import { getSuppliers } from '../services/supplierservice'
 import { localToday } from '../utils/date'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import {
   isLowStock as isLow, formatQty, formatCost, formatMoney, stockLevel, stockRatio, stockValue,
   expiryInfo, suggestedReorderQty, timeAgo, ITEM_CATEGORIES, EXPIRING_SOON_DAYS
@@ -1007,30 +1009,108 @@ const reorderItem = (i) => goReorder([i])
 const reorderAll = () => goReorder(items.value.filter(needsReorder))
 
 // ---------- Export ----------
-function csvCell(value) {
-  if (typeof value === 'number') return String(value)
-  let text = String(value ?? '')
-  if (/^[=+\-@]/.test(text)) text = `'${text}` // stop Excel from running it as a formula
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+// jsPDF's built-in font has no peso sign, so the PDF writes "PHP 1,234.00" instead of "₱1,234.00".
+function pdfPeso(value) {
+  return `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-function exportCsv() {
-  const header = ['Item', 'Category', 'Supplier', 'Quantity', 'Unit', 'Alert at', 'Unit cost', 'Stock value', 'Expiry date', 'Status']
-  const rows = filteredItems.value.map((i) => [
-    i.item_name, i.category || '', supplierName(i.supplier_id), Number(i.quantity), i.unit || 'kg',
-    Number(i.low_stock_threshold), Number(i.unit_cost || 0), stockValue(i), i.expiry_date ? String(i.expiry_date).slice(0, 10) : '',
-    LEVELS[stockLevel(i)].label
-  ])
-  const csv = [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }) // BOM so Excel reads it as UTF-8
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `inventory-${localToday()}.csv`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+function loadImageAsDataURL(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+async function exportPdf() {
+  if (!filteredItems.value.length) return
+  const doc = new jsPDF({ orientation: 'landscape' }) // 10 columns, so landscape
+  const GREEN = [5, 150, 105]
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const list = filteredItems.value
+
+  // Letterhead
+  const logoDataUrl = await loadImageAsDataURL(logoUrl)
+  if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, 9, 16, 16)
+  const textX = logoDataUrl ? 34 : 14
+
+  doc.setFontSize(18)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(...GREEN)
+  doc.text('Caterlytics', textX, 19)
+
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(100)
+  doc.text('Catering-Service Management & Inventory System', textX, 25)
+  doc.text(`Inventory Report  •  ${list.length} item${list.length === 1 ? '' : 's'}`, 14, 34)
+  doc.text(`Generated: ${new Date().toLocaleString('en-PH')}`, 14, 39)
+
+  doc.setDrawColor(220)
+  doc.line(14, 43, pageWidth - 14, 43)
+
+  const totalValue = list.reduce((sum, i) => sum + Number(stockValue(i) || 0), 0)
+
+  autoTable(doc, {
+    theme: 'grid',
+    startY: 48,
+    margin: { left: 14, right: 14 },
+    head: [['Item', 'Category', 'Supplier', 'Qty', 'Unit', 'Alert at', 'Unit cost', 'Stock value', 'Expiry', 'Status']],
+    body: list.map((i) => [
+      i.item_name,
+      i.category || '',
+      supplierName(i.supplier_id) || '',
+      String(Number(i.quantity)),
+      i.unit || 'kg',
+      String(Number(i.low_stock_threshold)),
+      pdfPeso(i.unit_cost || 0),
+      pdfPeso(stockValue(i)),
+      i.expiry_date ? String(i.expiry_date).slice(0, 10) : '—',
+      LEVELS[stockLevel(i)].label
+    ]),
+    foot: [['', '', '', '', '', '', 'Total', pdfPeso(totalValue), '', '']],
+    headStyles: { fillColor: GREEN },
+    footStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold' },
+    styles: { fontSize: 8, cellPadding: 2 },
+    columnStyles: {
+      3: { halign: 'right' },
+      5: { halign: 'right' },
+      6: { halign: 'right' },
+      7: { halign: 'right' }
+    },
+    // Colour the Status column so low stock stands out on paper too.
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 9) {
+        if (data.cell.raw === LEVELS.low.label) { data.cell.styles.textColor = [185, 28, 28]; data.cell.styles.fontStyle = 'bold' }
+        else if (data.cell.raw === LEVELS.near.label) data.cell.styles.textColor = [180, 83, 9]
+      }
+    }
+  })
+
+  // Page numbers
+  const pages = doc.internal.getNumberOfPages()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  doc.setFontSize(8)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(120)
+  for (let n = 1; n <= pages; n++) {
+    doc.setPage(n)
+    doc.text(`Page ${n} of ${pages}`, pageWidth - 14, pageHeight - 8, { align: 'right' })
+  }
+
+  doc.save(`inventory-${localToday()}.pdf`)
 }
 
 function openCreateModal() {
