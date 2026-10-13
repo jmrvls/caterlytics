@@ -1019,7 +1019,11 @@ async function handleDateCheck() {
     const result = await checkDateConflict(form.value.event_date)
     if (result.conflict) {
       const existing = result.existingBookings[0]
-      conflictWarning.value = `This date already has a booking (${existing.client_name} at ${formatTime(existing.event_time)}). Please choose a different date — the same date can't be booked twice.`
+      conflictWarning.value = result.capacity > 1
+        ? `This date is fully booked (${result.taken} of ${result.capacity} events taken). Please choose a different date.`
+        : `This date already has a booking (${existing.client_name} at ${formatTime(existing.event_time)}). Please choose a different date.`
+    } else if (result.capacity > 1 && result.taken > 0) {
+      conflictWarning.value = `Heads up: ${result.taken} of ${result.capacity} events are already booked on this date. Make sure a separate crew, vehicle and stock are available.`
     }
   } catch (error) {
     console.error('Conflict check failed:', error)

@@ -139,7 +139,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Who did what, and when, across your business. Records can't be edited or deleted from the app.</p>
           </div>
           <div class="flex items-center gap-2 sm:gap-3">
-            <button @click="exportCsv" :disabled="!rows.length || isExporting" class="flex-1 sm:flex-none min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-none text-sm font-semibold transition">{{ isExporting ? 'Exporting…' : 'Export CSV' }}</button>
+            <button @click="exportPdf" :disabled="!rows.length || isExporting" class="flex-1 sm:flex-none min-h-[44px] sm:min-h-0 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-none text-sm font-semibold transition">{{ isExporting ? 'Exporting…' : 'Export PDF' }}</button>
             <div class="hidden lg:block"><NotificationBell /></div>
           </div>
         </div>
@@ -284,6 +284,8 @@ import { useSidebarState } from '../composables/useSidebarState'
 import { useChatUnread } from '../composables/useChatUnread'
 import { useReviewAlerts } from '../composables/useReviewAlerts'
 import { useRouter } from 'vue-router'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import {
   getAuditLog, getActivityLog, getAuditActors, logActivity,
   TABLE_LABELS, ACTION_LABELS, describeChange
@@ -426,33 +428,120 @@ async function fetchAllForExport() {
   return all.slice(0, EXPORT_MAX)
 }
 
-async function exportCsv() {
+// jsPDF's built-in font can't draw some symbols (peso sign, arrows, dashes), so swap them for plain text.
+function pdfText(text) {
+  return String(text ?? '')
+    .replace(/₱/g, 'PHP ')
+    .replace(/→/g, '->')
+    .replace(/[—–]/g, '-')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\u00FF]/g, '')
+}
+
+function loadImageAsDataURL(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+async function exportPdf() {
   if (isExporting.value) return
   isExporting.value = true
   try {
     const data = await fetchAllForExport()
-    // Quote everything, and stop Excel from running cells that start with = + - @ as formulas.
-    const esc = (v) => {
-      let t = String(v ?? '')
-      if (/^[=+\-@\t\r]/.test(t)) t = "'" + t
-      return `"${t.replace(/"/g, '""')}"`
-    }
-    const header = tab.value === 'changes'
-      ? ['When', 'Who', 'Role', 'Action', 'Record', 'Record ID', 'Changes']
-      : ['When', 'Who', 'Role', 'Action', 'Details']
-    const lines = data.map((r) => tab.value === 'changes'
+    const isChanges = tab.value === 'changes'
+    const doc = new jsPDF({ orientation: 'landscape' })
+    const GREEN = [5, 150, 105]
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const f = filters.value
+
+    // Letterhead
+    const logoDataUrl = await loadImageAsDataURL(logoUrl)
+    if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, 9, 16, 16)
+    const textX = logoDataUrl ? 34 : 14
+
+    doc.setFontSize(18)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(...GREEN)
+    doc.text('Caterlytics', textX, 19)
+
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'normal')
+    doc.setTextColor(100)
+    doc.text('Catering-Service Management & Inventory System', textX, 25)
+    doc.text(`${isChanges ? 'Audit Log - Data changes' : 'Activity Log - Sign-ins & exports'}  •  ${data.length} row${data.length === 1 ? '' : 's'}`, 14, 34)
+
+    // Only list the filters that are actually applied.
+    const applied = []
+    if (f.table && isChanges) applied.push(`Record: ${TABLE_LABELS[f.table] || f.table}`)
+    if (f.action) applied.push(`Action: ${actionLabel(f.action)}`)
+    if (f.actor) applied.push(`User: ${actors.value.find((x) => x.actor_id === f.actor)?.actor_name || f.actor}`)
+    if (f.from) applied.push(`From: ${f.from}`)
+    if (f.to) applied.push(`To: ${f.to}`)
+    doc.text(`Filters: ${pdfText(applied.length ? applied.join('  |  ') : 'None (all records)')}`, 14, 39)
+    doc.text(`Generated: ${new Date().toLocaleString('en-PH')}`, 14, 44)
+
+    doc.setDrawColor(220)
+    doc.line(14, 48, pageWidth - 14, 48)
+
+    const head = isChanges
+      ? [['When', 'Who', 'Role', 'Action', 'Record', 'Record ID', 'Changes']]
+      : [['When', 'Who', 'Role', 'Action', 'Details']]
+    const body = data.map((r) => isChanges
       ? [formatWhen(r.created_at), r.actor_name, r.actor_role, actionLabel(r.action), TABLE_LABELS[r.table_name] || r.table_name, r.record_id,
-         changesOf(r).map((c) => r.action === 'UPDATE' ? `${c.key}: ${show(c.from)} -> ${show(c.to)}` : `${c.key}: ${show(c.to)}`).join('; ')]
-      : [formatWhen(r.created_at), r.actor_name, r.actor_role, actionLabel(r.action), r.summary || r.entity])
-    // BOM so Excel reads the UTF-8 (peso signs, accents) correctly.
-    const csv = '\uFEFF' + [header, ...lines].map((l) => l.map(esc).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit-log-${tab.value}-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    logActivity('EXPORT', 'Audit Logs', `Exported ${data.length} ${tab.value === 'changes' ? 'data-change' : 'activity'} rows`)
+         changesOf(r).map((c) => r.action === 'UPDATE' ? `${c.key}: ${show(c.from)} -> ${show(c.to)}` : `${c.key}: ${show(c.to)}`).join('\n')]
+      : [formatWhen(r.created_at), r.actor_name, r.actor_role, actionLabel(r.action), r.summary || r.entity]
+    ).map((row) => row.map((cell) => pdfText(cell)))
+
+    autoTable(doc, {
+      theme: 'grid',
+      startY: 52,
+      margin: { left: 14, right: 14, bottom: 16 },
+      head,
+      body,
+      headStyles: { fillColor: GREEN },
+      styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak', valign: 'top' },
+      columnStyles: isChanges
+        ? { 0: { cellWidth: 30 }, 1: { cellWidth: 28 }, 2: { cellWidth: 18 }, 3: { cellWidth: 18 }, 4: { cellWidth: 28 }, 5: { cellWidth: 22 } }
+        : { 0: { cellWidth: 34 }, 1: { cellWidth: 36 }, 2: { cellWidth: 24 }, 3: { cellWidth: 24 } },
+      // Colour the Action cell the same way the on-screen badges do.
+      didParseCell: (d) => {
+        if (d.section !== 'body' || d.column.index !== 3) return
+        const raw = data[d.row.index]?.action
+        if (raw === 'DELETE') d.cell.styles.textColor = [185, 28, 28]
+        else if (raw === 'UPDATE') d.cell.styles.textColor = [180, 83, 9]
+        else if (raw === 'INSERT' || raw === 'LOGIN') d.cell.styles.textColor = [4, 120, 87]
+      }
+    })
+
+    // Page numbers
+    const pages = doc.internal.getNumberOfPages()
+    doc.setFontSize(8)
+    doc.setFont(undefined, 'normal')
+    doc.setTextColor(120)
+    for (let n = 1; n <= pages; n++) {
+      doc.setPage(n)
+      doc.text(`Page ${n} of ${pages}`, pageWidth - 14, pageHeight - 8, { align: 'right' })
+    }
+
+    doc.save(`audit-log-${tab.value}-${new Date().toISOString().slice(0, 10)}.pdf`)
+    logActivity('EXPORT', 'Audit Logs', `Exported ${data.length} ${isChanges ? 'data-change' : 'activity'} rows (PDF)`)
   } catch (e) {
     pageError.value = e.message || 'Export failed.'
   } finally {

@@ -145,6 +145,14 @@
               <input v-model="businessForm.address" :disabled="!isBusinessOwner" type="text"
                 class="flex-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400" />
             </div>
+            <div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+              <label class="w-40 shrink-0 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:pt-3">Events Per Day</label>
+              <div class="flex-1">
+                <input v-model.number="businessForm.max_bookings_per_day" :disabled="!isBusinessOwner" type="number" min="1" max="20" step="1" required
+                  class="w-full sm:w-32 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400" />
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">How many events your team can handle on the same date (same time included). A date only shows as fully booked once this many Pending/Confirmed bookings are taken. Set it to the number of crews/teams you can field at once, e.g. 4 for peak days like Christmas.</p>
+              </div>
+            </div>
             <button v-if="isBusinessOwner" type="submit" :disabled="isSavingBusiness" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
               {{ isSavingBusiness ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -226,7 +234,7 @@ const userInitial = computed(() => (profile.value.full_name || currentUser.full_
 // Client has no business_id, so `business` stays null and the whole
 // section is hidden via v-if in the template).
 const business = ref(null)
-const businessForm = ref({ business_name: '', contact_email: '', contact_number: '', address: '' })
+const businessForm = ref({ business_name: '', contact_email: '', contact_number: '', address: '', max_bookings_per_day: 1 })
 const businessError = ref('')
 const businessSuccess = ref('')
 const isSavingBusiness = ref(false)
@@ -250,6 +258,7 @@ async function fetchBusiness() {
         contact_email: data.contact_email || '',
         contact_number: data.contact_number || '',
         address: data.address || '',
+        max_bookings_per_day: data.max_bookings_per_day || 1,
       }
     }
   } catch (error) {

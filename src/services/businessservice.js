@@ -26,7 +26,7 @@ export async function registerBusiness({ business_name, contact_email, contact_n
 export async function getMyBusiness() {
   const { data, error } = await supabase
     .from('tbl_business')
-    .select('business_id, business_name, owner_id, contact_email, contact_number, address, logo_url, cover_url, created_at')
+    .select('business_id, business_name, owner_id, contact_email, contact_number, address, logo_url, cover_url, created_at, max_bookings_per_day')
     .maybeSingle();
 
   if (error) throw new Error('Failed to load business info.');
@@ -108,10 +108,23 @@ export async function removeBusinessCover(businessId) {
 // original registrant (tbl_business.owner_id) to do this — everyone else's
 // update is silently rejected by the database (0 rows affected), which we
 // surface here as a clear error instead of a confusing "success".
-export async function updateMyBusiness(businessId, { business_name, contact_email, contact_number, address }) {
+// max_bookings_per_day = how many events this caterer can handle on the same
+// date (the database trigger enforce_booking_capacity uses it as the limit).
+export const MAX_BOOKINGS_PER_DAY_LIMIT = 20; // matches the DB CHECK on tbl_business
+
+export async function updateMyBusiness(businessId, { business_name, contact_email, contact_number, address, max_bookings_per_day }) {
+  const updates = { business_name, contact_email, contact_number, address };
+  if (max_bookings_per_day !== undefined && max_bookings_per_day !== null && max_bookings_per_day !== '') {
+    const cap = Number(max_bookings_per_day);
+    if (!Number.isInteger(cap) || cap < 1 || cap > MAX_BOOKINGS_PER_DAY_LIMIT) {
+      throw new Error(`Events per day must be a whole number from 1 to ${MAX_BOOKINGS_PER_DAY_LIMIT}.`);
+    }
+    updates.max_bookings_per_day = cap;
+  }
+
   const { data, error } = await supabase
     .from('tbl_business')
-    .update({ business_name, contact_email, contact_number, address })
+    .update(updates)
     .eq('business_id', businessId)
     .select()
     .maybeSingle();

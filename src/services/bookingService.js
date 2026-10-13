@@ -2,6 +2,7 @@ import { supabase } from '../supabaseClient';
 import { toTitleCase } from '../utils/textFormat';
 import { localToday } from '../utils/date';
 import { getPlatformSettings, checkBookingRules, checkCancellation } from './platformSettingsService';
+import { getMyBusiness } from './businessservice';
 
 // Mirrors the database CHECK (guest_count_positive) so users get a clear message.
 export const MAX_GUESTS = 5000;
@@ -158,7 +159,7 @@ export async function createBooking(bookingData) {
     const existing = conflict.existingBookings[0];
     throw new Error(
       existing
-        ? `There's already a booking on ${bookingData.event_date} (${existing.client_name}). Please choose another date.`
+        ? `${bookingData.event_date} is fully booked (${conflict.taken ?? 1} of ${conflict.capacity ?? 1} events taken, latest: ${existing.client_name}). Please choose another date.`
         : `${bookingData.event_date} is already booked with this caterer. Please choose another date.`
     );
   }
@@ -593,8 +594,23 @@ export async function checkDateConflict(eventDate, businessId = null, excludeBoo
       b.booking_id !== excludeBookingId &&
       ['Pending', 'Confirmed'].includes(b.booking_status)
   );
+
+  // Staff/admin path: the date is only "taken" once the business's daily
+  // capacity (tbl_business.max_bookings_per_day, default 1) is used up. This
+  // mirrors the database trigger enforce_booking_capacity, which stays the
+  // real enforcement. If the capacity can't be read we fall back to 1.
+  let capacity = 1;
+  try {
+    const business = await getMyBusiness();
+    capacity = Number(business?.max_bookings_per_day) || 1;
+  } catch {
+    capacity = 1;
+  }
+
   return {
-    conflict: existing.length > 0,
+    conflict: existing.length >= capacity,
     existingBookings: existing,
+    taken: existing.length,
+    capacity,
   };
 }
