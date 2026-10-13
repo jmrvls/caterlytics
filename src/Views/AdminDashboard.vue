@@ -375,23 +375,8 @@
             <a href="#" @click.prevent="router.push('/admin/staff')" class="text-xs sm:text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 px-2 sm:px-4 py-2 rounded-none text-center whitespace-nowrap transition-colors sm:flex-none">Manage Staff</a>
           </div>
 
-          <!-- Recent Bookings -->
-          <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Recent Bookings</h3>
-          <div v-if="isLoadingDashboard" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">Loading bookings...</div>
-          <div v-else-if="recentBookings.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No bookings yet.</div>
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            <div v-for="b in recentBookings" :key="b.booking_id" class="bg-white dark:bg-gray-800 rounded-none border border-emerald-600 dark:border-gray-700 p-4">
-              <div class="flex items-start justify-between gap-2 mb-2">
-                <p class="font-bold text-gray-900 dark:text-gray-100 truncate">{{ b.client_name }}</p>
-                <span :class="statusPillClass(b.booking_status)" class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ b.booking_status }}</span>
-              </div>
-              <p class="text-sm text-gray-600 dark:text-gray-300">{{ b.package_name || 'No package' }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ formatDate(b.event_date) }}</p>
-            </div>
-          </div>
-
           <!-- Upcoming Events + Needs Attention -->
-          <div v-if="!isLoadingDashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
+          <div v-if="!isLoadingDashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- Upcoming Events -->
             <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5">
               <div class="flex items-center justify-between mb-4">
@@ -428,6 +413,21 @@
                   </a>
                 </li>
               </ul>
+            </div>
+          </div>
+
+          <!-- Recent Bookings -->
+          <h3 class="font-bold text-gray-900 dark:text-gray-100 mt-8 mb-4">Recent Bookings</h3>
+          <div v-if="isLoadingDashboard" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">Loading bookings...</div>
+          <div v-else-if="recentBookings.length === 0" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No bookings yet.</div>
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            <div v-for="b in recentBookings" :key="b.booking_id" class="bg-white dark:bg-gray-800 rounded-none border border-emerald-600 dark:border-gray-700 p-4">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <p class="font-bold text-gray-900 dark:text-gray-100 truncate">{{ b.client_name }}</p>
+                <span :class="statusPillClass(b.booking_status)" class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold">{{ b.booking_status }}</span>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-300">{{ b.package_name || 'No package' }}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ formatDate(b.event_date) }}</p>
             </div>
           </div>
 
