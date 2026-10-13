@@ -9,6 +9,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ userName }} · Driver</p>
         </div>
         <button @click="reload(true)" :disabled="isLoading" class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50">Refresh</button>
+        <button @click="router.push('/settings')" class="px-3 py-2 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</button>
         <button @click="handleLogout" class="px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-900/30">Log out</button>
       </div>
     </header>

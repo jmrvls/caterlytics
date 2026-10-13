@@ -288,7 +288,8 @@ function goBack() {
   }
   // Opened/refreshed directly: there is no previous page to go back to.
   const role = currentUser.role
-  router.push(role === 'Client' ? '/client/bookings' : '/admin/dashboard')
+  if (role === 'Client') { router.push('/client/bookings'); return }
+  router.push(role === 'Staff' && currentUser.position === 'Driver' ? '/driver/deliveries' : '/admin/dashboard')
 }
 
 function flash(setter, message, ms = 3000) {

@@ -143,8 +143,8 @@
             <select v-model.number="rangeDays" class="px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <option v-for="r in RANGE_OPTIONS" :key="r.days" :value="r.days">{{ r.label }}</option>
             </select>
-            <button @click="exportCSV" :disabled="!summary.entries" class="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
-              Export CSV
+            <button @click="exportPDF" :disabled="!summary.entries" class="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              Export PDF
             </button>
             <div class="hidden lg:block"><NotificationBell /></div>
             <button @click="openLogModal()" :disabled="setupMissing" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap">
@@ -425,12 +425,14 @@ import { useSidebarState } from '../composables/useSidebarState'
 import { useChatUnread } from '../composables/useChatUnread'
 import { useReviewAlerts } from '../composables/useReviewAlerts'
 import { useRouter } from 'vue-router'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { getAllInventory } from '../services/inventoryService'
 import { getWasteLogs, logWaste, getUsageMovements } from '../services/wasteservice'
 import { formatQty } from '../utils/inventory'
 import {
   WASTE_REASONS, RANGE_OPTIONS, summarize, buildInsights, costOf, formatPeso,
-  formatShortDate, daysAgoISO, localISODate, logsToCSV,
+  formatShortDate, daysAgoISO, localISODate,
   COVER_OPTIONS, buildReorderPlan, reorderToCSV
 } from '../utils/waste'
 
@@ -597,19 +599,6 @@ async function submitLog() {
   }
 }
 
-function exportCSV() {
-  const csv = logsToCSV(summary.value.current)
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `waste-log-${localISODate()}.csv`
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
-}
-
 function exportReorderCSV() {
   const csv = reorderToCSV(reorderPlan.value.rows)
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' })
@@ -621,6 +610,182 @@ function exportReorderCSV() {
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
+}
+
+// ---------- Export: real generated PDF (same look as the Reports PDF) ----------
+// jsPDF's built-in font has no peso sign, so the PDF writes "PHP 1,234.00" instead of "₱1,234.00".
+function pdfPeso(value) {
+  return `PHP ${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+function pdfText(text) {
+  return String(text ?? '').replace(/₱/g, 'PHP ').replace(/→/g, 'to')
+}
+function loadImageAsDataURL(url) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+async function exportPDF() {
+  if (!summary.value.entries) return
+  const doc = new jsPDF()
+  const GREEN = [5, 150, 105]
+  const rangeLabel = RANGE_OPTIONS.find((r) => r.days === rangeDays.value)?.label || `Last ${rangeDays.value} days`
+  const s = summary.value
+
+  // Letterhead
+  const logoDataUrl = await loadImageAsDataURL(logoUrl)
+  if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, 9, 16, 16)
+  const textX = logoDataUrl ? 34 : 14
+
+  doc.setFontSize(18)
+  doc.setFont(undefined, 'bold')
+  doc.setTextColor(...GREEN)
+  doc.text('Caterlytics', textX, 19)
+
+  doc.setFontSize(10)
+  doc.setFont(undefined, 'normal')
+  doc.setTextColor(100)
+  doc.text('Catering-Service Management & Inventory System', textX, 25)
+  doc.text(`Waste Tracking Report  •  ${rangeLabel} (${daysAgoISO(rangeDays.value - 1)} to ${localISODate()})`, 14, 34)
+  doc.text(`Generated: ${new Date().toLocaleString('en-PH')}`, 14, 39)
+
+  doc.setDrawColor(220)
+  doc.line(14, 43, 196, 43)
+
+  let y = 50
+  // Starts a new page when a heading + a few rows would not fit.
+  const heading = (title) => {
+    if (y > 250) { doc.addPage(); y = 20 }
+    doc.setFontSize(12)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(31, 41, 55)
+    doc.text(title, 14, y)
+    y += 4
+  }
+  const after = () => { y = doc.lastAutoTable.finalY + 10 }
+  const common = { theme: 'grid', headStyles: { fillColor: GREEN }, margin: { left: 14, right: 14 } }
+
+  // Summary
+  heading('Summary')
+  autoTable(doc, {
+    ...common,
+    startY: y,
+    head: [['Metric', 'Value']],
+    body: [
+      ['Total waste cost', pdfPeso(s.totalCost)],
+      ['Previous period', s.changePct === null ? 'No waste logged' : `${pdfPeso(s.prevCost)} (${s.changePct > 0 ? '+' : ''}${s.changePct.toFixed(0)}%)`],
+      ['Waste entries', String(s.entries)],
+      ['Top cause', s.byReason[0]?.reason || '—'],
+    ],
+  })
+  after()
+
+  // Insights
+  if (insights.value.length) {
+    heading('How to reduce waste')
+    autoTable(doc, {
+      ...common,
+      startY: y,
+      head: [['Tip']],
+      body: insights.value.map((t) => [pdfText(t.text)]),
+      styles: { fontSize: 9 },
+    })
+    after()
+  }
+
+  // By reason
+  heading('Waste by reason')
+  autoTable(doc, {
+    ...common,
+    startY: y,
+    head: [['Reason', 'Entries', 'Share', 'Cost lost']],
+    body: s.byReason.map((r) => [r.reason, String(r.entries), `${Math.round(r.pct)}%`, pdfPeso(r.cost)]),
+    columnStyles: { 3: { halign: 'right' } },
+  })
+  after()
+
+  // Most wasted items
+  heading('Most wasted items')
+  autoTable(doc, {
+    ...common,
+    startY: y,
+    head: [['#', 'Item', 'Quantity', 'Entries', 'Cost lost']],
+    body: s.topItems.slice(0, 10).map((it, idx) => [String(idx + 1), it.name, formatQty(it.qty, it.unit), String(it.entries), pdfPeso(it.cost)]),
+    columnStyles: { 4: { halign: 'right' } },
+  })
+  after()
+
+  // Reorder suggestions
+  if (reorderPlan.value.rows.length) {
+    heading(`Reorder suggestions (covering ${coverDays.value} days)`)
+    autoTable(doc, {
+      ...common,
+      startY: y,
+      head: [['Item', 'Suggestion', 'On hand', 'Used / Wasted', 'Days left', 'Order qty', 'Est. cost']],
+      body: reorderPlan.value.rows.map((r) => {
+        const buy = r.status === 'reorder' && r.qty > 0
+        return [
+          r.name,
+          `${STATUS_UI[r.status].label}\n${pdfText(r.note)}`,
+          formatQty(r.onHand, r.unit),
+          `${formatQty(r.used, r.unit)} / ${formatQty(r.wasted, r.unit)} (${Math.round(r.wastePct)}%)`,
+          r.daysLeft === null ? '—' : String(Math.round(r.daysLeft)),
+          buy ? formatQty(r.qty, r.unit) : '—',
+          buy ? pdfPeso(r.cost) : '—',
+        ]
+      }),
+      foot: reorderPlan.value.reorderCount ? [['', '', '', '', '', 'Total', pdfPeso(reorderPlan.value.totalCost)]] : undefined,
+      footStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold' },
+      styles: { fontSize: 8 },
+    })
+    after()
+  }
+
+  // Full waste log for the period
+  heading('Waste log')
+  autoTable(doc, {
+    ...common,
+    startY: y,
+    head: [['Date', 'Item', 'Quantity', 'Reason', 'Cost lost', 'Note']],
+    body: s.current.map((l) => [
+      formatShortDate(l.waste_date),
+      l.item_name,
+      formatQty(l.quantity, l.unit),
+      l.reason,
+      pdfPeso(costOf(l)),
+      l.note || '—',
+    ]),
+    foot: [['', '', '', 'Total', pdfPeso(s.totalCost), '']],
+    footStyles: { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold' },
+    styles: { fontSize: 8 },
+    columnStyles: { 4: { halign: 'right' } },
+  })
+
+  // Page numbers
+  const pageCount = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+    doc.text(`Page ${i} of ${pageCount}`, 196, 290, { align: 'right' })
+  }
+
+  doc.save(`caterlytics-waste-report-${localISODate()}.pdf`)
 }
 
 function goTo(item) {
