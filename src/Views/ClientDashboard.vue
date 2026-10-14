@@ -110,18 +110,6 @@
 
       <!-- ============ STEP 1: PICK A CATERING BUSINESS ============ -->
       <div v-else-if="activeTab === 'Book Catering' && !selectedBusinessId">
-        <h3 class="font-bold text-gray-800 dark:text-gray-100">Choose a Catering Business</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">Pick your event type or date, then tap the caterer you want.</p>
-
-        <!-- Event type chips -->
-        <div v-if="businesses.length && allEventTypes.length" class="flex gap-2 overflow-x-auto pb-2 mb-2 -mx-1 px-1" role="group" aria-label="Filter by event type">
-          <button
-            v-for="t in ['All', ...allEventTypes]" :key="t" type="button"
-            @click="bizTypeFilter = t" :aria-pressed="bizTypeFilter === t"
-            :class="bizTypeFilter === t ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500'"
-            class="whitespace-nowrap px-3.5 py-1.5 rounded-full border text-xs font-semibold transition"
-          >{{ t === 'All' ? 'All events' : t }}</button>
-        </div>
 
         <div v-if="businesses.length" class="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
           <label for="biz-sort" class="text-xs font-semibold text-gray-500 dark:text-gray-400">Sort by</label>
