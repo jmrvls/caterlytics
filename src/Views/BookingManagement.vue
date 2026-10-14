@@ -274,12 +274,15 @@
               <button type="button" @click="toggleMenuRow(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `View menu (${menuPicksFor(b.booking_id).length})` }}
               </button>
-              <ul v-if="expandedMenuRows.has(b.booking_id)" class="mt-1 space-y-0.5">
-                <li v-for="p in menuPicksFor(b.booking_id)" :key="p.item_id" class="text-xs text-gray-600 dark:text-gray-300">
-                  <span class="text-gray-400 dark:text-gray-500">{{ p.category }}:</span> {{ p.item_name }}
-                  <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
-                </li>
-              </ul>
+              <div v-if="expandedMenuRows.has(b.booking_id)" class="mt-1.5 space-y-2">
+                <div v-for="grp in groupMenuPicks(menuPicksFor(b.booking_id))" :key="grp.category">
+                  <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ grp.category }}</p>
+                  <p v-for="p in grp.items" :key="p.item_id" class="text-xs text-gray-600 dark:text-gray-300">
+                    {{ p.item_name }}
+                    <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div v-if="addonsFor(b.booking_id).length" class="mb-2.5 text-xs text-gray-600 dark:text-gray-300">
@@ -379,12 +382,15 @@
                       <button type="button" @click="toggleMenuRow(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
                         {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `View menu (${menuPicksFor(b.booking_id).length})` }}
                       </button>
-                      <ul v-if="expandedMenuRows.has(b.booking_id)" class="mt-1 space-y-0.5 min-w-[11rem]">
-                        <li v-for="p in menuPicksFor(b.booking_id)" :key="p.item_id" class="text-xs">
-                          <span class="text-gray-400 dark:text-gray-500">{{ p.category }}:</span> {{ p.item_name }}
-                          <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
-                        </li>
-                      </ul>
+                      <div v-if="expandedMenuRows.has(b.booking_id)" class="mt-1.5 space-y-2 min-w-[11rem]">
+                        <div v-for="grp in groupMenuPicks(menuPicksFor(b.booking_id))" :key="grp.category">
+                          <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ grp.category }}</p>
+                          <p v-for="p in grp.items" :key="p.item_id" class="text-xs text-gray-600 dark:text-gray-300">
+                            {{ p.item_name }}
+                            <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td class="px-2 2xl:px-4 py-3.5">
@@ -750,7 +756,7 @@ import {
   setBookingSelections,
   getSelectionsForBookings
 } from '../services/bookingService'
-import { getAllPackages, getPackageMenu, getAllMenuItems } from '../services/packageService'
+import { getAllPackages, getPackageMenu, getAllMenuItems, MENU_CATEGORIES } from '../services/packageService'
 import { getAddonsForBookings, sumAddons } from '../services/addonService'
 import { sendBookingConfirmationSms, sendBookingCancellationSms } from '../services/smsService'
 import {
@@ -1013,6 +1019,15 @@ const menuPicksByBooking = ref({}) // booking_id -> [{ item_id, item_name, categ
 const expandedMenuRows = ref(new Set())
 function menuPicksFor(bookingId) {
   return menuPicksByBooking.value[bookingId] || []
+}
+// Group a booking's picked dishes by menu category (Main Course, Side Dish,
+// Soup, Dessert, Drinks first, then any other category so nothing is hidden).
+function groupMenuPicks(picks) {
+  const groups = {}
+  for (const p of picks) (groups[p.category || 'Other'] ||= []).push(p)
+  const known = MENU_CATEGORIES.filter((c) => groups[c])
+  const rest = Object.keys(groups).filter((c) => !MENU_CATEGORIES.includes(c))
+  return [...known, ...rest].map((c) => ({ category: c, items: groups[c] }))
 }
 function toggleMenuRow(id) {
   const next = new Set(expandedMenuRows.value)

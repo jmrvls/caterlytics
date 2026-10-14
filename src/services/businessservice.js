@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { isValidPhMobile, normalizePhMobile } from '../utils/validators';
 
 // Self-service: a logged-in Client account registers a brand-new catering
 // business and is promoted to Owner/Manager of it. All of the actual work
@@ -113,7 +114,13 @@ export async function removeBusinessCover(businessId) {
 export const MAX_BOOKINGS_PER_DAY_LIMIT = 20; // matches the DB CHECK on tbl_business
 
 export async function updateMyBusiness(businessId, { business_name, contact_email, contact_number, address, max_bookings_per_day }) {
-  const updates = { business_name, contact_email, contact_number, address };
+  // This number receives the "new booking" SMS, so it must be a PH mobile number
+  // (09XXXXXXXXX or +639XXXXXXXXX). Blank is allowed.
+  const rawNumber = String(contact_number ?? '').trim();
+  if (rawNumber && !isValidPhMobile(rawNumber)) {
+    throw new Error('Enter a valid mobile number, e.g. 09XXXXXXXXX. Booking text alerts are sent to this number.');
+  }
+  const updates = { business_name, contact_email, contact_number: rawNumber ? normalizePhMobile(rawNumber) : rawNumber, address };
   if (max_bookings_per_day !== undefined && max_bookings_per_day !== null && max_bookings_per_day !== '') {
     const cap = Number(max_bookings_per_day);
     if (!Number.isInteger(cap) || cap < 1 || cap > MAX_BOOKINGS_PER_DAY_LIMIT) {

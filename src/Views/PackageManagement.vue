@@ -215,10 +215,24 @@
 
               <!-- Menu summary: collapsed by default, expands in place -->
               <div class="mt-4 flex-1">
-                <p
-                  :class="expandedIds.has(pkg.package_id) ? '' : 'line-clamp-5'"
-                  class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line"
-                >{{ pkg.description || 'No description provided.' }}</p>
+                <div
+                  v-if="menuSections(pkg).length"
+                  :class="expandedIds.has(pkg.package_id) ? '' : 'max-h-44 overflow-hidden'"
+                  class="space-y-2.5"
+                >
+                  <div v-for="(sec, si) in menuSections(pkg)" :key="si">
+                    <p v-if="sec.title" class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{{ sec.title }}</p>
+                    <p
+                      v-for="(row, ri) in sec.rows"
+                      :key="ri"
+                      class="text-sm text-gray-600 dark:text-gray-300 leading-snug"
+                    >
+                      <span v-if="row.label" class="font-semibold text-gray-800 dark:text-gray-100">{{ row.label }}:</span>
+                      {{ row.items }}
+                    </p>
+                  </div>
+                </div>
+                <p v-else class="text-sm text-gray-600 dark:text-gray-300">No description provided.</p>
                 <button
                   v-if="needsToggle(pkg)"
                   type="button"
@@ -1011,6 +1025,43 @@ function toggleExpanded(id) {
 function needsToggle(pkg) {
   const text = pkg.description || ''
   return text.split('\n').length > 5 || text.length > 220
+}
+
+// Turns the package's free-text description into categorized sections.
+//   "3 Main Courses:"            -> section header
+//   "- Beef: Bistek, Broccoli"   -> row (label + dishes) under the current header
+//   "Appetizer: Lumpia Shanghai" -> its own section (category + dishes)
+// Returns [{ title, rows: [{ label, items }] }]
+function menuSections(pkg) {
+  const sections = []
+  let current = null
+  const start = (title) => { current = { title, rows: [] }; sections.push(current) }
+
+  for (const raw of String(pkg.description || '').split('\n')) {
+    const line = raw.trim()
+    if (!line) continue
+
+    const isBullet = line.startsWith('-')
+    const text = line.replace(/^-+\s*/, '')
+
+    if (!isBullet && text.endsWith(':')) {
+      start(text.slice(0, -1).trim())
+      continue
+    }
+
+    const m = text.match(/^([^:]{1,40}):\s*(.+)$/)
+    if (isBullet) {
+      if (!current) start('')
+      current.rows.push(m ? { label: m[1].trim(), items: m[2].trim() } : { label: '', items: text })
+    } else if (m) {
+      start(m[1].trim())
+      current.rows.push({ label: '', items: m[2].trim() })
+    } else {
+      if (!current) start('')
+      current.rows.push({ label: '', items: text })
+    }
+  }
+  return sections
 }
 
 // Small colour accent per tier name (falls back to emerald for custom names).
