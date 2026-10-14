@@ -513,13 +513,35 @@
             v-model="addonSearch" type="search" placeholder="Search add-ons..."
             class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
           />
+          <!-- Category tabs -->
+          <div v-if="addonCategoryTabs.length > 2" class="flex gap-2 overflow-x-auto pb-1">
+            <button
+              v-for="c in addonCategoryTabs"
+              :key="c.name"
+              type="button"
+              @click="addonCategoryFilter = c.name"
+              :class="addonCategoryFilter === c.name ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-emerald-400'"
+              class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 border rounded-full transition"
+            >{{ c.name }} <span class="opacity-70">({{ c.count }})</span></button>
+          </div>
           <p v-if="addons.length > 0 && visibleAddons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-3">No add-ons match your search.</p>
           <div v-if="addons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-none p-4 text-center">
             No add-ons yet. Add your first one below.
           </div>
+          <template v-for="(a, i) in visibleAddons" :key="a.addon_id">
+          <button
+            v-if="i === 0 || addonCategory(visibleAddons[i - 1]) !== addonCategory(a)"
+            type="button"
+            @click="toggleAddonSection(addonCategory(a))"
+            class="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 pt-3 first:pt-0 hover:text-emerald-600 dark:hover:text-emerald-400"
+          >
+            <span>{{ addonCategory(a) }} <span class="font-semibold opacity-70">({{ addonCategoryCounts[addonCategory(a)] }})</span></span>
+            <svg class="w-4 h-4 transition-transform" :class="{ '-rotate-90': isAddonSectionCollapsed(addonCategory(a)) }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           <div
-            v-for="a in visibleAddons"
-            :key="a.addon_id"
+            v-if="!isAddonSectionCollapsed(addonCategory(a))"
             :class="editingAddonId === a.addon_id ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-gray-100 dark:border-gray-700'"
             class="flex items-center justify-between gap-3 border rounded-none p-3"
           >
@@ -548,6 +570,7 @@
               </button>
             </div>
           </div>
+          </template>
         </div>
 
         <!-- Add / Edit form -->
@@ -773,11 +796,63 @@ function focusAddonForm() {
 const addonUsage = ref({}) // { [addon_id]: number of bookings using it }
 
 // Active add-ons first, hidden ones at the bottom; filtered by the search box.
+// Display-only grouping: category is guessed from the add-on name (first match wins).
+const ADDON_CATEGORY_RULES = [
+  ['Seafood', /salmon|bangus|fish|shrimp|hipon|squid|calamari|crab|tilapia|tuna|mussel|seafood/i],
+  ['Noodles & Pasta', /palabok|pancit|pasta|spaghetti|lasagna|carbonara|bihon|canton|noodle/i],
+  ['Poultry', /chicken|itik|duck|turkey/i],
+  ['Beef', /beef|caldereta|kare-?kare|bistek|stroganoff|tapa|steak/i],
+  ['Pork', /pork|lechon|liempo|sisig|ribs|tonkatsu|humba|bbq|barbe(que|cue)|pata/i],
+  ['Soup', /soup|sinigang|tinola|cream of/i],
+  ['Rice', /rice/i],
+  ['Vegetables', /vegetable|veggie|chopsuey|pinakbet|salad/i],
+  ['Dessert', /flan|halo-?halo|graham|cake|sago|buko|ice cream|dessert/i],
+  ['Drinks', /juice|iced tea|coffee|drink|water/i],
+  ['Staff & Service', /waiter|server|staff|chef|cook|attendant/i],
+  ['Photo & Entertainment', /photo|video|emcee|\bdj\b|band|magician|clown/i],
+  ['Decor & Equipment', /decor|flower|backdrop|balloon|table|chair|tent|linen|chafing|sound/i],
+]
+const addonCategory = (a) => ADDON_CATEGORY_RULES.find(([, re]) => re.test(a.addon_name))?.[0] || 'Other'
+const addonCategoryRank = (a) => {
+  const i = ADDON_CATEGORY_RULES.findIndex(([n]) => n === addonCategory(a))
+  return i === -1 ? 999 : i
+}
+
+const addonCategoryFilter = ref('All')
+const collapsedAddonSections = ref({}) // { [categoryName]: true }
+
+// Counts per category, based on the search box only (so the tabs stay stable while switching).
+const addonCategoryCounts = computed(() => {
+  const q = addonSearch.value.trim().toLowerCase()
+  const counts = {}
+  for (const a of addons.value) {
+    if (q && !`${a.addon_name} ${a.description || ''}`.toLowerCase().includes(q)) continue
+    const c = addonCategory(a)
+    counts[c] = (counts[c] || 0) + 1
+  }
+  return counts
+})
+
+const addonCategoryTabs = computed(() => {
+  const counts = addonCategoryCounts.value
+  const ordered = [...ADDON_CATEGORY_RULES.map(([n]) => n), 'Other'].filter((n) => counts[n])
+  const total = ordered.reduce((sum, n) => sum + counts[n], 0)
+  return [{ name: 'All', count: total }, ...ordered.map((name) => ({ name, count: counts[name] }))]
+})
+
+// Collapsing only applies when viewing "All"; picking a single category always shows its items.
+const isAddonSectionCollapsed = (name) => addonCategoryFilter.value === 'All' && !!collapsedAddonSections.value[name]
+function toggleAddonSection(name) {
+  if (addonCategoryFilter.value !== 'All') return
+  collapsedAddonSections.value = { ...collapsedAddonSections.value, [name]: !collapsedAddonSections.value[name] }
+}
+
 const visibleAddons = computed(() => {
   const q = addonSearch.value.trim().toLowerCase()
   return addons.value
+    .filter((a) => addonCategoryFilter.value === 'All' || addonCategory(a) === addonCategoryFilter.value)
     .filter((a) => !q || `${a.addon_name} ${a.description || ''}`.toLowerCase().includes(q))
-    .sort((a, b) => Number(b.is_active) - Number(a.is_active) || String(a.addon_name).localeCompare(String(b.addon_name)))
+    .sort((a, b) => addonCategoryRank(a) - addonCategoryRank(b) || Number(b.is_active) - Number(a.is_active) || String(a.addon_name).localeCompare(String(b.addon_name)))
 })
 
 async function openAddonsModal() {
@@ -788,6 +863,8 @@ async function openAddonsModal() {
 function closeAddonsModal() {
   showAddonsModal.value = false
   addonSearch.value = ''
+  addonCategoryFilter.value = 'All'
+  collapsedAddonSections.value = {}
   cancelEditAddon()
 }
 
@@ -796,6 +873,7 @@ async function loadAddons() {
   addonsError.value = ''
   try {
     addons.value = await getMyAddons()
+    if (!addons.value.some((a) => addonCategory(a) === addonCategoryFilter.value)) addonCategoryFilter.value = 'All'
     getAddonUsageCounts().then((c) => { addonUsage.value = c })
   } catch (err) {
     addonsError.value = err.message || 'Failed to load add-ons.'
