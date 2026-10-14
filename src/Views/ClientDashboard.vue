@@ -252,39 +252,79 @@
 
       <!-- ============ STEP 2: CHOOSE A PACKAGE (Shopee-style browse grid) ============ -->
       <div v-else-if="activeTab === 'Book Catering' && !form.package_id">
-        <button type="button" @click="clearBusiness" class="flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 mb-4">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back
-        </button>
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
-          <div class="flex items-center gap-3 min-w-0">
-            <img
-              v-if="selectedBusiness?.logo_url"
-              :src="selectedBusiness.logo_url"
-              :alt="selectedBusiness.business_name"
-              class="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
-            />
-            <div v-else class="w-11 h-11 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold flex-shrink-0">
-              {{ (selectedBusiness?.business_name || '?').charAt(0).toUpperCase() }}
-            </div>
-            <div class="min-w-0">
-              <p class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Booking with</p>
-              <p class="font-bold text-gray-800 dark:text-gray-100 truncate">{{ selectedBusiness?.business_name }}</p>
-              <p v-if="selectedBusiness?.address || selectedBusiness?.contact_number" class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {{ [selectedBusiness.address, selectedBusiness.contact_number].filter(Boolean).join(' · ') }}
-              </p>
-            </div>
+        <!-- Facebook-style caterer page: cover, big avatar, name, actions, tab strip -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden mb-5">
+          <!-- Cover photo -->
+          <div class="relative h-44 sm:h-64 lg:h-80 bg-gradient-to-br from-emerald-500 to-emerald-800">
+            <img v-if="selectedBusiness?.cover_url" :src="selectedBusiness.cover_url" :alt="`${selectedBusiness.business_name} cover photo`" @click="showCoverViewer = true" class="w-full h-full object-cover object-[center_25%] cursor-pointer" />
+            <span v-else class="absolute inset-0 flex items-center justify-center text-8xl font-extrabold text-white/25 select-none" aria-hidden="true">{{ (selectedBusiness?.business_name || '?').charAt(0).toUpperCase() }}</span>
+            <div class="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/35 to-transparent"></div>
+            <button type="button" @click="clearBusiness" class="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white dark:bg-gray-900/80 dark:hover:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-100 shadow transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back
+            </button>
           </div>
-          <div class="flex items-center gap-4 sm:gap-3 sm:flex-shrink-0">
-            <HeartButton small :active="favoriteBusinessIds.has(selectedBusinessId)" @toggle="toggleFavoriteBusiness(selectedBusinessId)" />
-            <button type="button" @click="messageBusiness(selectedBusinessId)" class="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline whitespace-nowrap">Message</button>
-            <button type="button" @click="openBusinessProfile(selectedBusinessId)" class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline whitespace-nowrap">Profile &amp; reviews</button>
-            <button type="button" @click="clearBusiness" class="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:underline whitespace-nowrap">Change</button>
+
+          <div class="px-4 sm:px-8">
+            <div class="flex flex-col sm:flex-row items-center sm:items-end gap-3 sm:gap-5 pt-3 pb-4 text-center sm:text-left">
+              <img
+                v-if="selectedBusiness?.logo_url"
+                :src="selectedBusiness.logo_url"
+                :alt="selectedBusiness.business_name"
+                class="w-28 h-28 sm:w-36 sm:h-36 -mt-16 sm:-mt-20 rounded-full object-cover border-4 border-white dark:border-gray-800 bg-white shadow flex-shrink-0 relative"
+              />
+              <div v-else class="w-28 h-28 sm:w-36 sm:h-36 -mt-16 sm:-mt-20 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 border-4 border-white dark:border-gray-800 shadow flex items-center justify-center text-5xl font-bold flex-shrink-0 relative">
+                {{ (selectedBusiness?.business_name || '?').charAt(0).toUpperCase() }}
+              </div>
+
+              <div class="flex-1 min-w-0 sm:pb-2">
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-gray-50 leading-tight">{{ selectedBusiness?.business_name }}</h2>
+                <div class="flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-gray-600 dark:text-gray-300">
+                  <span v-if="selectedBusiness?.review_count" class="flex items-center gap-1.5">
+                    <StarRating :model-value="selectedBusiness.avg_rating || 0" />
+                    <span>{{ selectedBusiness.avg_rating?.toFixed(1) }} ({{ selectedBusiness.review_count }})</span>
+                  </span>
+                  <span v-else class="px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-[10px] font-bold uppercase tracking-wide">New</span>
+                  <span>{{ businessPackages.length }} package{{ businessPackages.length === 1 ? '' : 's' }}</span>
+                  <span v-if="selectedBusiness?.min_price">From ₱{{ formatPrice(selectedBusiness.min_price) }}/head</span>
+                </div>
+                <p v-if="selectedBusiness?.address || selectedBusiness?.contact_number" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {{ [selectedBusiness.address, selectedBusiness.contact_number].filter(Boolean).join(' · ') }}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2 sm:pb-2 flex-shrink-0">
+                <button type="button" @click="messageBusiness(selectedBusinessId)" class="flex items-center gap-2 px-4 min-h-[40px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4-.8L3 20l1.3-3.9A7.6 7.6 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  Message
+                </button>
+                <div class="min-h-[40px] px-2 flex items-center rounded-xl border border-gray-200 dark:border-gray-700">
+                  <HeartButton small :active="favoriteBusinessIds.has(selectedBusinessId)" @toggle="toggleFavoriteBusiness(selectedBusinessId)" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab strip: Packages / About / Reviews, all shown on this page -->
+            <div class="border-t border-gray-200 dark:border-gray-700 flex items-center gap-1 overflow-x-auto no-scrollbar -mx-1" role="tablist">
+              <button
+                v-for="bt in ['Packages', 'About', 'Reviews']" :key="bt"
+                type="button" role="tab" :aria-selected="bizPageTab === bt"
+                @click="bizPageTab = bt"
+                :class="bizPageTab === bt ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-transparent rounded-lg my-1'"
+                class="px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-[3px] transition"
+              >
+                {{ bt }}<span v-if="bt === 'Reviews' && selectedBusiness?.review_count"> ({{ selectedBusiness.review_count }})</span>
+              </button>
+            </div>
           </div>
         </div>
 
+        <!-- PACKAGES TAB -->
+        <template v-if="bizPageTab === 'Packages'">
         <!-- 18 / 19 / 23: search, filter, sort, price display -->
         <div v-if="businessPackages.length" class="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl p-3 sm:p-4 mb-5 space-y-3">
           <div class="relative">
@@ -380,6 +420,78 @@
               </div>
             </div>
           </div>
+        </div>
+        </template>
+
+        <!-- ABOUT TAB -->
+        <div v-else-if="bizPageTab === 'About'" class="space-y-5">
+          <div v-if="isLoadingBizPage" class="text-sm text-gray-400 dark:text-gray-500 text-center py-16">Loading…</div>
+          <template v-else>
+            <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">About</p>
+              <p v-if="bizAbout?.about" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ bizAbout.about }}</p>
+              <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">This business hasn't added a description yet.</p>
+            </section>
+
+            <section class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Contact</p>
+                <p v-if="bizAbout?.address" class="text-sm text-gray-700 dark:text-gray-300">📍 {{ bizAbout.address }}</p>
+                <p v-if="bizAbout?.contact_number" class="text-sm text-gray-700 dark:text-gray-300 mt-1">📞 {{ bizAbout.contact_number }}</p>
+                <p v-if="bizAbout?.contact_email" class="text-sm text-gray-700 dark:text-gray-300 mt-1 break-all">✉️ {{ bizAbout.contact_email }}</p>
+                <p v-if="!bizAbout?.address && !bizAbout?.contact_number && !bizAbout?.contact_email" class="text-sm text-gray-400 dark:text-gray-500 italic">No contact details yet.</p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+                <p class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Business Hours</p>
+                <p v-if="bizAbout?.opening_hours" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ bizAbout.opening_hours }}</p>
+                <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">Not specified.</p>
+              </div>
+            </section>
+
+            <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5">
+              <p class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">Policies</p>
+              <p v-if="bizAbout?.policies" class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ bizAbout.policies }}</p>
+              <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">No policies posted. Please ask the business directly before booking.</p>
+            </section>
+          </template>
+        </div>
+
+        <!-- REVIEWS TAB -->
+        <div v-else class="space-y-4">
+          <div v-if="isLoadingBizPage" class="text-sm text-gray-400 dark:text-gray-500 text-center py-16">Loading…</div>
+          <template v-else>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 flex items-center gap-4">
+              <p class="text-4xl font-extrabold text-gray-900 dark:text-gray-50">{{ selectedBusiness?.review_count ? selectedBusiness.avg_rating?.toFixed(1) : '–' }}</p>
+              <div>
+                <StarRating :model-value="selectedBusiness?.avg_rating || 0" />
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  <template v-if="selectedBusiness?.review_count">{{ selectedBusiness.review_count }} review{{ selectedBusiness.review_count === 1 ? '' : 's' }} from past clients</template>
+                  <template v-else>No reviews yet</template>
+                </p>
+              </div>
+            </div>
+
+            <p v-if="!bizReviews.length" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 text-center py-12 text-sm text-gray-400 dark:text-gray-500 italic">
+              No reviews yet. Only clients with a completed booking can leave one.
+            </p>
+            <ul v-else class="space-y-3">
+              <li v-for="r in bizReviews" :key="r.review_id" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ r.reviewer }}</p>
+                  <span class="text-xs text-gray-400 dark:text-gray-500">{{ formatReviewDate(r.created_at) }}</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1">
+                  <StarRating :model-value="r.rating" />
+                  <span v-if="r.package_name" class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ r.package_name }}</span>
+                </div>
+                <p v-if="r.comment" class="text-sm text-gray-700 dark:text-gray-300 mt-2 whitespace-pre-line">{{ r.comment }}</p>
+                <div v-if="r.owner_reply" class="mt-3 border-l-4 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 rounded-r-lg p-3">
+                  <p class="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1">Reply from the caterer</p>
+                  <p class="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-line break-words">{{ r.owner_reply }}</p>
+                </div>
+              </li>
+            </ul>
+          </template>
         </div>
       </div>
 
@@ -1128,6 +1240,16 @@
         </div>
       </div>
 
+      <!-- ============ COVER PHOTO VIEWER ============ -->
+      <div v-if="showCoverViewer && selectedBusiness?.cover_url" @click="showCoverViewer = false" class="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true" aria-label="Cover photo">
+        <button type="button" @click="showCoverViewer = false" aria-label="Close photo" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/30 text-white transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <img :src="selectedBusiness.cover_url" :alt="`${selectedBusiness.business_name} cover photo`" @click.stop class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+      </div>
+
       <!-- ============ BUSINESS PROFILE + REVIEW MODALS ============ -->
       <BusinessProfileModal
         v-if="showProfile"
@@ -1155,7 +1277,7 @@ import { toTitleCase } from '../utils/textFormat'
 import { supabase } from '../supabaseClient'
 import { logoutUser } from '../services/authService'
 import { getMyProfile } from '../services/profileService'
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { getPlatformSettings, bookingDateRange, checkCancellation, computeFees, SETTINGS_DEFAULTS } from '../services/platformSettingsService'
 import { useRouter } from 'vue-router'
 import { PORTIONS, getSelectionsForBookings, createBooking, getMyBookings, checkDateConflict, getTakenDates, cancelMyBooking, updateMyBooking, setBookingSelections, getBookingSelections } from '../services/bookingService'
@@ -1714,6 +1836,37 @@ let packageExtrasToken = 0
 
 // 24 / 25: business profile modal + review modal
 const showProfile = ref(false)
+// In-page caterer tabs (Packages / About / Reviews)
+const bizPageTab = ref('Packages')
+const bizAbout = ref(null)
+const bizReviews = ref([])
+const isLoadingBizPage = ref(false)
+async function loadBizPage(id) {
+  bizAbout.value = null
+  bizReviews.value = []
+  isLoadingBizPage.value = true
+  const [profile, reviews] = await Promise.allSettled([getBusinessProfile(id), getBusinessReviews(id)])
+  if (selectedBusinessId.value !== id) return
+  bizAbout.value = profile.status === 'fulfilled' && profile.value ? profile.value : (businesses.value.find((b) => b.business_id === id) || null)
+  if (reviews.status === 'fulfilled') bizReviews.value = reviews.value
+  isLoadingBizPage.value = false
+}
+watch(selectedBusinessId, (id) => {
+  bizPageTab.value = 'Packages'
+  if (id) loadBizPage(id)
+})
+function formatReviewDate(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+// Full-size cover photo viewer (click the cover on a caterer's page)
+const showCoverViewer = ref(false)
+function onCoverViewerKey(e) { if (e.key === 'Escape') showCoverViewer.value = false }
+watch(showCoverViewer, (open) => {
+  if (open) window.addEventListener('keydown', onCoverViewerKey)
+  else window.removeEventListener('keydown', onCoverViewerKey)
+})
+onBeforeUnmount(() => window.removeEventListener('keydown', onCoverViewerKey))
 const profileBusinessId = ref('')
 // Chat: set when the client taps "Message" on a business profile.
 const chatStartBusinessId = ref(null)

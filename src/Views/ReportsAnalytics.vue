@@ -190,7 +190,7 @@
             <span class="text-sm text-gray-500 dark:text-gray-400">to</span>
             <input type="date" v-model="dateTo" @change="activePreset = 'custom'" class="py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100 dark:[color-scheme:dark]" aria-label="To date" />
           </div>
-          <span class="text-xs text-gray-400 dark:text-gray-500">Filtered by event date</span>
+          <span class="text-xs text-gray-400 dark:text-gray-500">Bookings &amp; sales by event date · Expenses by expense date</span>
         </div>
 
         <!-- Error Banner -->
@@ -208,33 +208,53 @@
           <!-- ============ OVERVIEW TAB ============ -->
           <div v-if="activeTab === 'Overview'">
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Revenue Collected</h3>
-                <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(revenueCollected) }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Total Expenses</h3>
-                <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(totalExpenses) }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Gross Profit</h3>
-                <p class="text-xl font-semibold mt-1" :class="grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'">₱{{ formatPrice(grossProfit) }}</p>
-              </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Outstanding Balance</h3>
-                <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(outstandingBalance) }}</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
+              <div v-for="k in kpiCards" :key="k.label" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 p-5">
+                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">{{ k.label }}</h3>
+                <p class="text-xl font-semibold mt-1" :class="k.tone || 'text-gray-900 dark:text-gray-100'">{{ k.display }}</p>
+                <p v-if="k.change !== null" class="text-xs font-semibold mt-1" :class="changeClass(k)">
+                  {{ k.change > 0 ? '▲' : k.change < 0 ? '▼' : '–' }} {{ Math.abs(k.change).toFixed(1) }}%
+                  <span class="font-normal text-gray-400 dark:text-gray-500">vs prev period</span>
+                </p>
               </div>
             </div>
+            <p v-if="prevRange" class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+              Compared with the previous {{ prevRange.days }} day{{ prevRange.days === 1 ? '' : 's' }} ({{ formatDate(prevRange.from) }} to {{ formatDate(prevRange.to) }}).
+            </p>
+            <p v-else class="text-xs text-gray-400 dark:text-gray-500 mb-6">
+              Pick Today, This Week, This Month or a custom range to see ▲▼ changes versus the previous period.
+            </p>
 
-            <div class="grid grid-cols-2 gap-4 mb-6">
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Total Billed</h3>
-                <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(totalBilled) }}</p>
+            <!-- Revenue vs Expenses trend -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 p-5 mb-6">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h3 class="font-bold text-gray-800 dark:text-gray-100">Revenue vs Expenses</h3>
+                <div class="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-emerald-500 inline-block"></span>Revenue</span>
+                  <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-red-400 inline-block"></span>Expenses</span>
+                  <select v-model="trendMode" aria-label="Group by" class="py-1.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+                    <option value="auto">Auto</option>
+                    <option value="day">Daily</option>
+                    <option value="week">Weekly</option>
+                    <option value="month">Monthly</option>
+                  </select>
+                </div>
               </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
-                <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Low Stock Items</h3>
-                <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{{ lowStockItems.length }}</p>
+              <div v-if="!trend.rows.length" class="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">No revenue or expenses in this range.</div>
+              <div v-else class="overflow-x-auto">
+                <div class="flex items-end gap-3 h-52 min-w-max px-1 border-b border-gray-200 dark:border-gray-700">
+                  <div
+                    v-for="r in trend.rows" :key="r.key"
+                    class="flex items-end gap-0.5 w-10 h-full flex-shrink-0"
+                    :title="`${r.label}\nRevenue: ₱${formatPrice(r.rev)}\nExpenses: ₱${formatPrice(r.exp)}\nNet: ₱${formatPrice(r.net)}`"
+                  >
+                    <div class="flex-1 bg-emerald-500 rounded-t" :style="{ height: barPct(r.rev) + '%' }"></div>
+                    <div class="flex-1 bg-red-400 rounded-t" :style="{ height: barPct(r.exp) + '%' }"></div>
+                  </div>
+                </div>
+                <div class="flex gap-3 min-w-max px-1 mt-1.5">
+                  <span v-for="r in trend.rows" :key="r.key" class="w-10 flex-shrink-0 text-[10px] text-center text-gray-500 dark:text-gray-400">{{ r.label }}</span>
+                </div>
               </div>
             </div>
 
@@ -252,22 +272,80 @@
                 </div>
               </div>
             </div>
+
+            <!-- Top performers / peak times -->
+            <div class="grid grid-cols-1 gap-6 mt-6">
+              <div v-for="c in performerCards" :key="c.title" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 p-5">
+                <h3 class="font-bold text-gray-800 dark:text-gray-100 mb-4">{{ c.title }}</h3>
+                <div v-if="!c.rows.length" class="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No data in this range.</div>
+                <div v-else class="space-y-3">
+                  <div v-for="(r, i) in c.rows" :key="r.label">
+                    <div class="flex items-center justify-between gap-3 text-sm mb-1">
+                      <span class="font-semibold text-gray-800 dark:text-gray-100 truncate">
+                        {{ i + 1 }}. {{ r.label }}
+                        <span v-if="r.badge" class="ml-1 px-1.5 py-0.5 text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">{{ r.badge }}</span>
+                      </span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ r.detail }}</span>
+                    </div>
+                    <div class="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full" :class="c.color" :style="{ width: r.pct + '%' }"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- ============ SALES REPORT TAB ============ -->
           <div v-else-if="activeTab === 'Sales Report'">
+            <div class="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+              <select v-model="paymentStatusFilter" aria-label="Payment status" class="py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+                <option value="All">All payment statuses</option>
+                <option value="Paid">Paid</option>
+                <option value="Partial">Partial</option>
+                <option value="Unpaid">Unpaid</option>
+              </select>
+              <button v-if="salesFiltersActive" @click="clearSalesFilters" class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Clear filters</button>
+            </div>
+
+            <!-- Unpaid & overdue balances -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden mb-4">
+              <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-gray-800 dark:text-gray-100">Unpaid &amp; Overdue Balances ({{ receivables.length }})</h3>
+                <p class="text-sm font-bold text-red-500 dark:text-red-400">
+                  ₱{{ formatPrice(outstandingBalance) }} owed<span v-if="overdueTotal > 0"> · ₱{{ formatPrice(overdueTotal) }} overdue</span>
+                </p>
+              </div>
+              <div v-if="!receivables.length" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No unpaid balances in this range.</div>
+              <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
+                <li v-for="r in visibleReceivables" :key="r.payment_id" class="flex items-center justify-between gap-3 px-6 py-3 text-sm">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-gray-800 dark:text-gray-100 truncate capitalize">{{ r.tbl_bookings?.client_name || '—' }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ r.tbl_bookings?.package_name || '—' }} · Event {{ formatDate(r.tbl_bookings?.event_date) }}</p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="font-bold text-red-500 dark:text-red-400">₱{{ formatPrice(r.balance) }}</p>
+                    <p class="text-xs font-semibold" :class="r.overdue ? 'text-red-500' : (r.daysLeft !== null && r.daysLeft <= 7 ? 'text-amber-600' : 'text-gray-400')">{{ dueLabel(r) }}</p>
+                  </div>
+                </li>
+              </ul>
+              <button v-if="receivables.length > 8" @click="showAllReceivables = !showAllReceivables" class="w-full py-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400 border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                {{ showAllReceivables ? 'Show less' : `Show all ${receivables.length}` }}
+              </button>
+            </div>
+
             <div class="rounded-none border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-gray-100">Sales Records ({{ filteredPayments.length }})</h3>
-                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Total Collected: ₱{{ formatPrice(revenueCollected) }}</p>
+                <h3 class="font-bold text-gray-800 dark:text-gray-100">Sales Records ({{ shownPayments.length }})</h3>
+                <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Total Collected: ₱{{ formatPrice(shownPaidTotal) }}</p>
               </div>
-              <div v-if="filteredPayments.length === 0" class="text-center py-14 text-gray-400 dark:text-gray-500 text-sm">
+              <div v-if="shownPayments.length === 0" class="text-center py-14 text-gray-400 dark:text-gray-500 text-sm">
                 No sales found for the selected date range.
               </div>
               <div v-else>
                 <!-- Mobile card list -->
                 <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                  <div v-for="p in filteredPayments" :key="p.payment_id" class="px-4 py-3.5">
+                  <div v-for="p in shownPayments" :key="p.payment_id" class="px-4 py-3.5">
                     <div class="flex items-start justify-between gap-2 mb-1.5">
                       <p class="font-semibold text-gray-800 dark:text-gray-100 truncate capitalize">{{ p.tbl_bookings?.client_name || '—' }}</p>
                       <span :class="paymentStatusBadgeClass(p.payment_status)" class="shrink-0 text-xs font-semibold leading-5">
@@ -310,7 +388,7 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    <tr v-for="p in filteredPayments" :key="p.payment_id">
+                    <tr v-for="p in shownPayments" :key="p.payment_id">
                       <td class="px-6 py-3.5 font-medium text-gray-800 dark:text-gray-100 capitalize">{{ p.tbl_bookings?.client_name || '—' }}</td>
                       <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">{{ formatDate(p.tbl_bookings?.event_date) }}</td>
                       <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">{{ p.tbl_bookings?.package_name || '—' }}</td>
@@ -333,17 +411,26 @@
 
           <!-- ============ BOOKINGS REPORT TAB ============ -->
           <div v-else-if="activeTab === 'Bookings Report'">
+            <div class="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+              <select v-model="bookingStatusFilter" aria-label="Booking status" class="py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+                <option value="All">All statuses</option>
+                <option v-for="s in STATUS_LIST" :key="s" :value="s">{{ s }}</option>
+              </select>
+              <button v-if="bookingFiltersActive" @click="clearBookingFilters" class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Clear filters</button>
+            </div>
+
             <div class="rounded-none border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-gray-100">Booking Records ({{ filteredBookings.length }})</h3>
+                <h3 class="font-bold text-gray-800 dark:text-gray-100">Booking Records ({{ shownBookings.length }})</h3>
+                <p class="text-sm font-bold text-gray-600 dark:text-gray-300">Total Guests: {{ shownGuestTotal }}</p>
               </div>
-              <div v-if="filteredBookings.length === 0" class="text-center py-14 text-gray-400 dark:text-gray-500 text-sm">
+              <div v-if="shownBookings.length === 0" class="text-center py-14 text-gray-400 dark:text-gray-500 text-sm">
                 No bookings found for the selected date range.
               </div>
               <div v-else>
                 <!-- Mobile card list -->
                 <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                  <div v-for="b in filteredBookings" :key="b.booking_id" class="px-4 py-3.5">
+                  <div v-for="b in shownBookings" :key="b.booking_id" class="px-4 py-3.5">
                     <div class="flex items-start justify-between gap-2 mb-1.5">
                       <p class="font-semibold text-gray-800 dark:text-gray-100 truncate capitalize">{{ b.client_name }}</p>
                       <template v-if="paymentByBookingId.get(b.booking_id)">
@@ -389,7 +476,7 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    <tr v-for="b in filteredBookings" :key="b.booking_id">
+                    <tr v-for="b in shownBookings" :key="b.booking_id">
                       <td class="px-6 py-3.5 font-medium text-gray-800 dark:text-gray-100 capitalize">{{ b.client_name }}</td>
                       <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">{{ formatDate(b.event_date) }}</td>
                       <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300 capitalize">{{ b.event_location }}</td>
@@ -506,6 +593,27 @@
                 </svg>
                 New Expense
               </button>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 p-5 mb-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 class="font-bold text-gray-800 dark:text-gray-100">Expenses by Category</h3>
+                <p v-if="cogsPct !== null" class="text-xs text-gray-500 dark:text-gray-400">
+                  Direct costs (Ingredients + Supplies) are <span class="font-bold text-gray-700 dark:text-gray-200">{{ cogsPct.toFixed(1) }}%</span> of revenue collected
+                </p>
+              </div>
+              <div v-if="!expenseBreakdown.length" class="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No expenses in this range.</div>
+              <div v-else class="space-y-3">
+                <div v-for="c in expenseBreakdown" :key="c.label">
+                  <div class="flex items-center justify-between gap-3 text-sm mb-1">
+                    <span class="font-semibold text-gray-800 dark:text-gray-100 truncate">{{ c.label }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">₱{{ formatPrice(c.amount) }} · {{ c.pct.toFixed(1) }}%</span>
+                  </div>
+                  <div class="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full bg-red-400" :style="{ width: c.pct + '%' }"></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden">
@@ -743,37 +851,9 @@ const rangePresets = [
 ]
 const activePreset = ref('all')
 
-// Uses the LOCAL date (not toISOString, which is UTC and can be off by
-// one day in the Philippines).
-function toISODate(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function applyPreset(key) {
-  const now = new Date()
-  activePreset.value = key
-
-  if (key === 'today') {
-    dateFrom.value = toISODate(now)
-    dateTo.value = toISODate(now)
-  } else if (key === 'week') {
-    // Monday to Sunday of the current week
-    const start = new Date(now)
-    start.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-    const end = new Date(start)
-    end.setDate(start.getDate() + 6)
-    dateFrom.value = toISODate(start)
-    dateTo.value = toISODate(end)
-  } else if (key === 'month') {
-    dateFrom.value = toISODate(new Date(now.getFullYear(), now.getMonth(), 1))
-    dateTo.value = toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
-  } else {
-    dateFrom.value = ''
-    dateTo.value = ''
-  }
+// Sales follow the booking's event date (same as the Bookings report).
+function paymentDate(p) {
+  return p.tbl_bookings?.event_date
 }
 
 const generatedOn = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
@@ -870,7 +950,7 @@ const paymentByBookingId = computed(() => {
 // date range picker behaves the same way across every tab.
 const filteredPayments = computed(() => {
   return payments.value.filter((p) => {
-    const eventDate = p.tbl_bookings?.event_date
+    const eventDate = paymentDate(p)
     if (dateFrom.value && (!eventDate || eventDate < dateFrom.value)) return false
     if (dateTo.value && (!eventDate || eventDate > dateTo.value)) return false
     return true
@@ -980,6 +1060,239 @@ const statusBreakdown = computed(() => {
     }
   })
 })
+
+// ---------- Report extras: profit, trends, comparisons, rankings ----------
+function inRange(d, from, to) {
+  if (!d) return false
+  if (from && d < from) return false
+  if (to && d > to) return false
+  return true
+}
+function pctChange(cur, prev) {
+  if (prev === 0) return cur === 0 ? 0 : null
+  return ((cur - prev) / Math.abs(prev)) * 100
+}
+function sum(list, pick) {
+  return list.reduce((s, x) => s + (Number(pick(x)) || 0), 0)
+}
+
+// Metrics for any date range (used for the previous-period comparison).
+function metricsFor(from, to) {
+  const any = !!(from || to)
+  const pays = payments.value.filter((p) => !any || inRange(paymentDate(p), from, to))
+  const billable = pays.filter((p) => !cancelledBookingIds.value.has(p.booking_id))
+  const exps = expenses.value.filter((e) => !any || inRange(e.expense_date, from, to))
+  const revenue = sum(pays, (p) => p.amount_paid)
+  const expensesTotal = sum(exps, (e) => e.amount)
+  const cogs = sum(exps.filter((e) => COGS_CATEGORIES.includes(e.category)), (e) => e.amount)
+  return {
+    revenue,
+    expenses: expensesTotal,
+    gross: revenue - cogs,
+    net: revenue - expensesTotal,
+    billed: sum(billable, (p) => p.total_amount),
+    bookings: bookings.value.filter((b) => !any || inRange(b.event_date, from, to)).length
+  }
+}
+
+// Previous period = the same number of days right before the selected range.
+const prevRange = computed(() => {
+  if (!dateFrom.value || !dateTo.value) return null
+  const from = new Date(dateFrom.value + 'T00:00:00')
+  const to = new Date(dateTo.value + 'T00:00:00')
+  const days = Math.round((to - from) / 86400000) + 1
+  if (!(days > 0)) return null
+  const prevTo = new Date(from)
+  prevTo.setDate(prevTo.getDate() - 1)
+  const prevFrom = new Date(prevTo)
+  prevFrom.setDate(prevFrom.getDate() - (days - 1))
+  return { from: toISODate(prevFrom), to: toISODate(prevTo), days }
+})
+const prevMetrics = computed(() => (prevRange.value ? metricsFor(prevRange.value.from, prevRange.value.to) : null))
+
+// ---------- Booking insights ----------
+const activeBookings = computed(() => filteredBookings.value.filter((b) => b.booking_status !== 'Cancelled'))
+
+// Billed amount from the payment record, or the estimate if there is none yet.
+function bookingRevenue(b) {
+  const pay = paymentByBookingId.value.get(b.booking_id)
+  return pay ? Number(pay.total_amount) || 0 : estimateBookingAmount(b)
+}
+
+// ---------- KPI cards (with ▲▼ vs previous period) ----------
+function pesos(v) {
+  return `₱${formatPrice(v)}`
+}
+const kpiCards = computed(() => {
+  const pm = prevMetrics.value
+  const card = (label, display, o = {}) => ({
+    label,
+    display,
+    tone: o.tone || '',
+    upIsBad: !!o.upIsBad,
+    change: pm && o.cur !== undefined && o.prev !== undefined ? pctChange(o.cur, o.prev) : null
+  })
+  const sign = (v) => (v >= 0 ? 'text-emerald-600' : 'text-red-500')
+  return [
+    card('Revenue Collected', pesos(revenueCollected.value), { cur: revenueCollected.value, prev: pm?.revenue }),
+    card('Total Expenses', pesos(totalExpenses.value), { cur: totalExpenses.value, prev: pm?.expenses, upIsBad: true }),
+    card('Gross Profit', pesos(grossProfit.value), { tone: sign(grossProfit.value), cur: grossProfit.value, prev: pm?.gross }),
+    card('Outstanding Balance', pesos(outstandingBalance.value), { upIsBad: true }),
+    card('Total Billed', pesos(totalBilled.value), { cur: totalBilled.value, prev: pm?.billed }),
+    card('Total Bookings', String(filteredBookings.value.length), { cur: filteredBookings.value.length, prev: pm?.bookings }),
+    card('Low Stock Items', String(lowStockItems.value.length))
+  ]
+})
+function changeClass(k) {
+  if (k.change === 0) return 'text-gray-400'
+  const good = k.upIsBad ? k.change < 0 : k.change > 0
+  return good ? 'text-emerald-600' : 'text-red-500'
+}
+
+// ---------- Revenue vs Expenses trend ----------
+const trendMode = ref('auto') // auto | day | week | month
+function bucketStart(dStr, mode) {
+  const d = new Date(dStr + 'T00:00:00')
+  if (mode === 'month') return toISODate(new Date(d.getFullYear(), d.getMonth(), 1))
+  if (mode === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return toISODate(d)
+}
+function nextBucket(startStr, mode) {
+  const d = new Date(startStr + 'T00:00:00')
+  if (mode === 'month') d.setMonth(d.getMonth() + 1)
+  else d.setDate(d.getDate() + (mode === 'week' ? 7 : 1))
+  return toISODate(d)
+}
+function bucketLabel(startStr, mode) {
+  const d = new Date(startStr + 'T00:00:00')
+  return mode === 'month'
+    ? d.toLocaleDateString('en-PH', { month: 'short', year: '2-digit' })
+    : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
+const trend = computed(() => {
+  const points = []
+  filteredPayments.value.forEach((p) => {
+    const d = paymentDate(p)
+    if (d) points.push({ d, rev: Number(p.amount_paid) || 0, exp: 0 })
+  })
+  filteredExpenses.value.forEach((e) => {
+    if (e.expense_date) points.push({ d: e.expense_date, rev: 0, exp: Number(e.amount) || 0 })
+  })
+  if (!points.length) return { mode: 'month', rows: [], max: 1 }
+  const dates = points.map((x) => x.d).sort()
+  const minD = dateFrom.value || dates[0]
+  const maxD = dateTo.value || dates[dates.length - 1]
+  const span = Math.round((new Date(maxD + 'T00:00:00') - new Date(minD + 'T00:00:00')) / 86400000) + 1
+  let mode = trendMode.value
+  if (mode === 'auto') mode = span <= 31 ? 'day' : span <= 120 ? 'week' : 'month'
+
+  const map = new Map()
+  points.forEach((x) => {
+    const key = bucketStart(x.d, mode)
+    const cur = map.get(key) || { rev: 0, exp: 0 }
+    cur.rev += x.rev
+    cur.exp += x.exp
+    map.set(key, cur)
+  })
+  const rows = []
+  let key = bucketStart(minD, mode)
+  const last = bucketStart(maxD, mode)
+  for (let i = 0; i < 400 && key <= last; i++) {
+    const v = map.get(key) || { rev: 0, exp: 0 }
+    rows.push({ key, label: bucketLabel(key, mode), rev: v.rev, exp: v.exp, net: v.rev - v.exp })
+    key = nextBucket(key, mode)
+  }
+  const shown = rows.slice(-60)
+  const max = Math.max(1, ...shown.map((r) => Math.max(r.rev, r.exp)))
+  return { mode, rows: shown, max }
+})
+function barPct(v) {
+  if (!v) return 0
+  return Math.max(2, (v / trend.value.max) * 100)
+}
+
+// ---------- Rankings (top packages / event types / clients / peak days) ----------
+function toRows(list, valueOf, detailOf) {
+  const max = Math.max(1, ...list.map(valueOf))
+  return list.map((r) => ({ label: r.label, detail: detailOf(r), pct: Math.round((valueOf(r) / max) * 100), badge: r.badge || '' }))
+}
+const topPackages = computed(() => {
+  const map = new Map()
+  activeBookings.value.forEach((b) => {
+    const label = b.package_name || 'No package'
+    const cur = map.get(label) || { label, count: 0, revenue: 0 }
+    cur.count += 1
+    cur.revenue += bookingRevenue(b)
+    map.set(label, cur)
+  })
+  const list = [...map.values()].sort((a, b) => b.count - a.count || b.revenue - a.revenue).slice(0, 5)
+  return toRows(list, (r) => r.count, (r) => `${r.count} booking${r.count === 1 ? '' : 's'} · ${pesos(r.revenue)}`)
+})
+const performerCards = computed(() => [
+  { title: 'Top Packages', color: 'bg-emerald-500', rows: topPackages.value }
+])
+
+// ---------- Expenses by category ----------
+const expenseBreakdown = computed(() => {
+  const total = totalExpenses.value
+  const map = new Map()
+  filteredExpenses.value.forEach((e) => {
+    const label = e.category || 'Other'
+    map.set(label, (map.get(label) || 0) + (Number(e.amount) || 0))
+  })
+  return [...map.entries()]
+    .map(([label, amount]) => ({ label, amount, pct: total > 0 ? (amount / total) * 100 : 0 }))
+    .sort((a, b) => b.amount - a.amount)
+})
+const cogsPct = computed(() => (revenueCollected.value > 0 ? (costOfGoodsSold.value / revenueCollected.value) * 100 : null))
+
+// ---------- Receivables (unpaid / overdue balances) ----------
+const showAllReceivables = ref(false)
+const receivables = computed(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return billablePayments.value
+    .filter((p) => Number(p.balance || 0) > 0)
+    .map((p) => {
+      const ed = p.tbl_bookings?.event_date
+      const daysLeft = ed ? Math.round((new Date(ed + 'T00:00:00') - today) / 86400000) : null
+      return { ...p, daysLeft, overdue: daysLeft !== null && daysLeft < 0 }
+    })
+    .sort((a, b) => {
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1
+      return (a.daysLeft ?? 99999) - (b.daysLeft ?? 99999)
+    })
+})
+const visibleReceivables = computed(() => (showAllReceivables.value ? receivables.value : receivables.value.slice(0, 8)))
+const overdueTotal = computed(() => sum(receivables.value.filter((r) => r.overdue), (r) => r.balance))
+function dueLabel(r) {
+  if (r.daysLeft === null) return 'No event date'
+  if (r.daysLeft < 0) return `${-r.daysLeft} day${r.daysLeft === -1 ? '' : 's'} overdue`
+  if (r.daysLeft === 0) return 'Event today'
+  return `Event in ${r.daysLeft} day${r.daysLeft === 1 ? '' : 's'}`
+}
+
+// ---------- Tab filters (status) ----------
+const bookingStatusFilter = ref('All')
+const paymentStatusFilter = ref('All')
+const shownBookings = computed(() =>
+  filteredBookings.value.filter((b) => bookingStatusFilter.value === 'All' || b.booking_status === bookingStatusFilter.value)
+)
+const shownPayments = computed(() =>
+  filteredPayments.value.filter((p) => paymentStatusFilter.value === 'All' || p.payment_status === paymentStatusFilter.value)
+)
+const bookingFiltersActive = computed(() => bookingStatusFilter.value !== 'All')
+const salesFiltersActive = computed(() => paymentStatusFilter.value !== 'All')
+function clearBookingFilters() {
+  bookingStatusFilter.value = 'All'
+}
+function clearSalesFilters() {
+  paymentStatusFilter.value = 'All'
+}
+const shownPaidTotal = computed(() => sum(shownPayments.value, (p) => p.amount_paid))
+const shownBilledTotal = computed(() => sum(shownPayments.value, (p) => p.total_amount))
+const shownBalanceTotal = computed(() => sum(shownPayments.value, (p) => p.balance))
+const shownGuestTotal = computed(() => sum(shownBookings.value, (b) => b.guest_count))
 
 // ---------- Inventory ----------
 // Stock value = quantity on hand x unit cost (for the Inventory Report).
@@ -1124,32 +1437,71 @@ async function exportPDF() {
   doc.text('Catering-Service Management & Inventory System', textX, 25)
   doc.text(`${activeTab.value} Report  •  Range: ${rangeLabel}`, 14, 34)
   doc.text(`Generated: ${new Date().toLocaleString('en-PH')}`, 14, 39)
+  doc.text(`Prepared by: ${userName.value} (${userRole.value})`, 196, 34, { align: 'right' })
 
   doc.setDrawColor(220)
   doc.line(14, 43, 196, 43)
 
   let startY = 50
 
+  const FOOT_STYLE = { fillColor: [243, 244, 246], textColor: [31, 41, 55], fontStyle: 'bold' }
+  const addSection = (title, head, body, foot) => {
+    let y = (doc.lastAutoTable?.finalY ?? startY) + 10
+    if (y > 250) {
+      doc.addPage()
+      y = 20
+    }
+    doc.setFontSize(11)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(31, 41, 55)
+    doc.text(title, 14, y)
+    doc.setFont(undefined, 'normal')
+    autoTable(doc, {
+      startY: y + 3,
+      head: [head],
+      body,
+      foot: foot ? [foot] : undefined,
+      theme: 'grid',
+      headStyles: { fillColor: [5, 150, 105] },
+      footStyles: FOOT_STYLE,
+      styles: { fontSize: 8 },
+    })
+  }
+
   if (activeTab.value === 'Overview') {
     autoTable(doc, {
       startY,
-      head: [['Metric', 'Value']],
-      body: [
-        ['Total Billed', `PHP ${formatPrice(totalBilled.value)}`],
-        ['Revenue Collected', `PHP ${formatPrice(revenueCollected.value)}`],
-        ['Total Expenses', `PHP ${formatPrice(totalExpenses.value)}`],
-        ['Gross Profit', `PHP ${formatPrice(grossProfit.value)}`],
-        ['Outstanding Balance', `PHP ${formatPrice(outstandingBalance.value)}`],
-        ['Low Stock Items', `${lowStockItems.value.length} of ${inventory.value.length} tracked item(s)`],
-      ],
+      head: [prevRange.value ? ['Metric', 'Value', 'vs previous period'] : ['Metric', 'Value']],
+      body: kpiCards.value.map((k) => {
+        const row = [k.label, k.display.replace('₱', 'PHP ')]
+        if (prevRange.value) row.push(k.change === null ? '—' : `${k.change >= 0 ? '+' : '-'}${Math.abs(k.change).toFixed(1)}%`)
+        return row
+      }),
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] },
     })
+    addSection(
+      'Bookings by Status',
+      ['Status', 'Bookings', 'Share'],
+      statusBreakdown.value.map((s) => [s.status, String(s.count), `${s.pct}%`]),
+      ['Total', String(filteredBookings.value.length), '']
+    )
+    performerCards.value.forEach((c) => {
+      if (c.rows.length) addSection(c.title, ['Name', 'Details'], c.rows.map((r) => [r.badge ? `${r.label} (${r.badge})` : r.label, r.detail.replace(/₱/g, 'PHP ')]))
+    })
+    if (expenseBreakdown.value.length) {
+      addSection(
+        'Expenses by Category',
+        ['Category', 'Amount', 'Share'],
+        expenseBreakdown.value.map((c) => [c.label, `PHP ${formatPrice(c.amount)}`, `${c.pct.toFixed(1)}%`]),
+        ['Total', `PHP ${formatPrice(totalExpenses.value)}`, '100%']
+      )
+    }
   } else if (activeTab.value === 'Sales Report') {
     autoTable(doc, {
       startY,
       head: [['Client', 'Event Date', 'Package', 'Payment Date', 'Total Billed', 'Paid', 'Balance', 'Status']],
-      body: filteredPayments.value.map((p) => [
+      body: shownPayments.value.map((p) => [
         toTitleCase(p.tbl_bookings?.client_name) || '—',
         formatDate(p.tbl_bookings?.event_date),
         p.tbl_bookings?.package_name || '—',
@@ -1159,15 +1511,31 @@ async function exportPDF() {
         `PHP ${formatPrice(p.balance)}`,
         p.payment_status,
       ]),
+      foot: [[`Total (${shownPayments.value.length})`, '', '', '', `PHP ${formatPrice(shownBilledTotal.value)}`, `PHP ${formatPrice(shownPaidTotal.value)}`, `PHP ${formatPrice(shownBalanceTotal.value)}`, '']],
+      footStyles: FOOT_STYLE,
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] },
       styles: { fontSize: 8 },
     })
+    if (receivables.value.length) {
+      addSection(
+        'Unpaid & Overdue Balances',
+        ['Client', 'Package', 'Event Date', 'Balance', 'Due'],
+        receivables.value.map((r) => [
+          toTitleCase(r.tbl_bookings?.client_name) || '—',
+          r.tbl_bookings?.package_name || '—',
+          formatDate(r.tbl_bookings?.event_date),
+          `PHP ${formatPrice(r.balance)}`,
+          dueLabel(r),
+        ]),
+        ['Total owed', '', '', `PHP ${formatPrice(outstandingBalance.value)}`, overdueTotal.value > 0 ? `PHP ${formatPrice(overdueTotal.value)} overdue` : '']
+      )
+    }
   } else if (activeTab.value === 'Bookings Report') {
     autoTable(doc, {
       startY,
       head: [['Client', 'Event Date', 'Location', 'Guests', 'Package', 'Total Billed', 'Paid', 'Balance', 'Status']],
-      body: filteredBookings.value.map((b) => {
+      body: shownBookings.value.map((b) => {
         const pay = paymentByBookingId.value.get(b.booking_id)
         return [
           toTitleCase(b.client_name),
@@ -1181,6 +1549,14 @@ async function exportPDF() {
           pay ? pay.payment_status : 'No record',
         ]
       }),
+      foot: [[
+        `Total (${shownBookings.value.length})`, '', '', String(shownGuestTotal.value), '',
+        `PHP ${formatPrice(sum(shownBookings.value.map((b) => paymentByBookingId.value.get(b.booking_id)).filter(Boolean), (p) => p.total_amount))}`,
+        `PHP ${formatPrice(sum(shownBookings.value.map((b) => paymentByBookingId.value.get(b.booking_id)).filter(Boolean), (p) => p.amount_paid))}`,
+        `PHP ${formatPrice(sum(shownBookings.value.map((b) => paymentByBookingId.value.get(b.booking_id)).filter(Boolean), (p) => p.balance))}`,
+        '',
+      ]],
+      footStyles: FOOT_STYLE,
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] },
       styles: { fontSize: 8 },
@@ -1217,6 +1593,14 @@ async function exportPDF() {
       headStyles: { fillColor: [5, 150, 105] },
       footStyles: { fillColor: [243, 244, 246], textColor: [17, 24, 39], fontStyle: 'bold' },
     })
+    if (expenseBreakdown.value.length) {
+      addSection(
+        'Expenses by Category',
+        ['Category', 'Amount', 'Share'],
+        expenseBreakdown.value.map((c) => [c.label, `PHP ${formatPrice(c.amount)}`, `${c.pct.toFixed(1)}%`]),
+        ['Total', `PHP ${formatPrice(totalExpenses.value)}`, '100%']
+      )
+    }
   }
 
   // Page numbers
