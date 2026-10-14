@@ -139,9 +139,9 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Seasonal pricing, promo codes, and loyalty rewards for your packages.</p>
           </div>
           <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <div class="hidden lg:block"><NotificationBell /></div>
             <button v-if="tab === 'seasons'" @click="openRuleModal()" :class="btnPrimary" class="whitespace-nowrap">Add Season</button>
             <button v-if="tab === 'promos'" @click="openPromoModal()" :class="btnPrimary" class="whitespace-nowrap">New Promo Code</button>
+            <div class="hidden lg:block"><NotificationBell /></div>
           </div>
         </div>
 

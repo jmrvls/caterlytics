@@ -148,9 +148,6 @@
             </div>
 
             <div class="flex items-center gap-3 flex-shrink-0">
-              <div class="hidden lg:block">
-                <NotificationBell />
-              </div>
               <button
                 type="button"
                 @click="openCalendar"
@@ -167,6 +164,9 @@
                 </svg>
                 New Booking
               </button>
+              <div class="hidden lg:block">
+                <NotificationBell />
+              </div>
             </div>
           </div>
 

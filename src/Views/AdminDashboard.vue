@@ -172,8 +172,8 @@
               <p class="text-gray-500 dark:text-gray-400 mt-1">You can view and manage client payments here.</p>
             </div>
             <div class="hidden lg:flex items-center gap-3">
-              <NotificationBell />
               <span class="text-sm text-gray-400 dark:text-gray-500">{{ todayLabel }}</span>
+              <NotificationBell />
             </div>
           </div>
 

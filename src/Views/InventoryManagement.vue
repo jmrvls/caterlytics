@@ -148,9 +148,6 @@
           </div>
 
           <div class="flex items-center gap-3 flex-shrink-0">
-            <div class="hidden lg:block">
-              <NotificationBell />
-            </div>
             <button @click="exportPdf" :disabled="!filteredItems.length" class="hidden sm:flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap" title="Download the list below as a PDF file">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
@@ -163,6 +160,9 @@
               </svg>
               New Item
             </button>
+            <div class="hidden lg:block">
+              <NotificationBell />
+            </div>
           </div>
         </div>
 

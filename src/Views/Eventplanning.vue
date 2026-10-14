@@ -138,14 +138,17 @@
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">Event Planning</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Guest list, seating arrangement, and dietary needs per event.</p>
           </div>
-          <div class="w-full sm:w-96">
-            <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Event</label>
-            <select v-model="selectedBookingId" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none">
-              <option value="" disabled>Select an upcoming event…</option>
-              <option v-for="b in bookings" :key="b.booking_id" :value="b.booking_id">
-                {{ formatDateOnly(b.event_date) }} — {{ b.client_name }} ({{ b.guest_count }} guests, {{ b.booking_status }})
-              </option>
-            </select>
+          <div class="flex items-end gap-3 w-full sm:w-auto">
+            <div class="w-full sm:w-96">
+              <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Event</label>
+              <select v-model="selectedBookingId" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none">
+                <option value="" disabled>Select an upcoming event…</option>
+                <option v-for="b in bookings" :key="b.booking_id" :value="b.booking_id">
+                  {{ formatDateOnly(b.event_date) }} — {{ b.client_name }} ({{ b.guest_count }} guests, {{ b.booking_status }})
+                </option>
+              </select>
+            </div>
+            <div class="hidden lg:block"><NotificationBell /></div>
           </div>
         </div>
 

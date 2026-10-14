@@ -146,13 +146,13 @@
             <button @click="exportPDF" :disabled="!summary.entries" class="px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition">
               Export PDF
             </button>
-            <div class="hidden lg:block"><NotificationBell /></div>
             <button @click="openLogModal()" :disabled="setupMissing" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
               Log Waste
             </button>
+            <div class="hidden lg:block"><NotificationBell /></div>
           </div>
         </div>
 
