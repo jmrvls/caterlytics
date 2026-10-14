@@ -152,29 +152,29 @@
 
         <div v-if="isLoading && !reviews.length" class="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Loading reviews...</div>
 
-        <div v-else-if="!reviews.length && !pageError" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-14 px-4 text-gray-400 dark:text-gray-500 text-sm">
+        <div v-else-if="!reviews.length && !pageError" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-14 px-4 text-gray-400 dark:text-gray-500 text-sm">
           No reviews yet. Clients can rate you once a booking is marked <span class="font-semibold">Completed</span>, so make sure finished events are updated in Event Bookings.
         </div>
 
         <template v-else-if="reviews.length">
           <!-- Summary cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Average rating</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ stats.average.toFixed(1) }} <span class="text-sm font-medium text-gray-400">/ 5</span></p>
               <div class="mt-1"><StarRating :model-value="stats.average" /></div>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total reviews</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ stats.total }}</p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ stats.positivePct }}% rated 4–5 stars</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Awaiting your reply</p>
               <p :class="stats.awaitingReply ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'" class="text-xl sm:text-2xl font-bold">{{ stats.awaitingReply }}</p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ stats.replied }} replied</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Needs attention</p>
               <p :class="lowCount ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'" class="text-xl sm:text-2xl font-bold">{{ lowCount }}</p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">reviews with 1–2 stars</p>
@@ -183,7 +183,7 @@
 
           <!-- Rating breakdown + per-package -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5">
               <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-3">Rating breakdown</h2>
               <div class="space-y-2">
                 <button
@@ -202,7 +202,7 @@
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">Tap a row to filter the list below.</p>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5">
               <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-3">By package</h2>
               <ul v-if="packageStats.length" class="divide-y divide-gray-100 dark:divide-gray-700 max-h-56 overflow-y-auto">
                 <li v-for="p in packageStats" :key="p.key" class="flex items-center justify-between gap-3 py-2 text-sm">
@@ -246,11 +246,11 @@
           </div>
 
           <!-- Review list -->
-          <div v-if="!filteredReviews.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
+          <div v-if="!filteredReviews.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
             No reviews match these filters.
           </div>
           <ul v-else class="space-y-3">
-            <li v-for="r in visibleReviews" :key="r.review_id" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5">
+            <li v-for="r in visibleReviews" :key="r.review_id" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-3 min-w-0">
                   <div class="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-sm flex-shrink-0">

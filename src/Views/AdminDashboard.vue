@@ -210,7 +210,7 @@
             <button
               v-for="e in myAssignedEvents" :key="e.booking_id"
               @click="openEventDetailModal(e)"
-              class="text-left bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 p-4 hover:border-emerald-400 dark:hover:border-emerald-500 transition"
+              class="text-left bg-white dark:bg-gray-800 rounded-none border border-gray-300 dark:border-gray-600 p-4 hover:border-emerald-400 dark:hover:border-emerald-500 transition"
             >
               <div class="h-1.5 w-10 bg-gray-200 dark:bg-gray-600 rounded-full mb-4"></div>
               <p class="text-xs text-gray-400 dark:text-gray-500 mb-1">{{ formatDate(e.event_date) }}{{ e.event_time ? ` · ${formatTime(e.event_time)}` : '' }}</p>
@@ -298,7 +298,7 @@
 
           <!-- Metric cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div @click="router.push('/admin/payments')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+            <div @click="router.push('/admin/payments')" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 2v8m0 0v2m0-2c-1.11 0-2.08-.402-2.599-1M12 6a9 9 0 100 18 9 9 0 000-18z" />
@@ -307,7 +307,7 @@
               </div>
               <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{{ isLoadingDashboard ? '…' : formatCurrency(totalRevenue) }}</p>
             </div>
-            <div @click="router.push('/admin/bookings')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+            <div @click="router.push('/admin/bookings')" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -316,7 +316,7 @@
               </div>
               <p class="text-2xl font-black text-gray-900 dark:text-gray-100">{{ isLoadingDashboard ? '…' : totalBookings }}</p>
             </div>
-            <div @click="router.push('/admin/inventory')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+            <div @click="router.push('/admin/inventory')" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4" />
@@ -325,7 +325,7 @@
               </div>
               <p class="text-2xl font-black" :class="!isLoadingDashboard && lowStockCount > 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'">{{ isLoadingDashboard ? '…' : lowStockCount }}</p>
             </div>
-            <div @click="router.push('/admin/staff')" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+            <div @click="router.push('/admin/staff')" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 cursor-pointer hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
               <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs font-semibold mb-2">
                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" />
@@ -338,7 +338,7 @@
 
           <!-- Status breakdown -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Booking Status</p>
               <div class="flex flex-col gap-2.5">
                 <div v-for="row in bookingStatusRows" :key="row.label" class="flex items-center justify-between text-sm">
@@ -350,7 +350,7 @@
                 </div>
               </div>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 mb-3">Payment Status</p>
               <div class="flex flex-col gap-2.5">
                 <div v-for="row in paymentStatusRows" :key="row.label" class="flex items-center justify-between text-sm">
@@ -371,7 +371,7 @@
           <!-- Upcoming Events + Needs Attention -->
           <div v-if="!isLoadingDashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <!-- Upcoming Events -->
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 p-5">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-gray-900 dark:text-gray-100">Upcoming Events</h3>
                 <a href="#" @click.prevent="router.push('/admin/planning')" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline">Event Planning &rarr;</a>
@@ -392,7 +392,7 @@
             </div>
 
             <!-- Needs Attention -->
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 p-5">
               <h3 class="font-bold text-gray-900 dark:text-gray-100 mb-4">Needs Attention</h3>
               <p v-if="attentionItems.length === 0" class="text-sm text-emerald-600 dark:text-emerald-400 py-4">All good. Nothing needs your attention right now.</p>
               <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -428,7 +428,7 @@
 
 
         <!-- ============ PLACEHOLDER FOR OTHER SECTIONS ============ -->
-        <div v-if="activeSection !== 'Dashboard'" class="bg-white dark:bg-gray-800 p-8 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 text-center text-gray-400 dark:text-gray-500">
+        <div v-if="activeSection !== 'Dashboard'" class="bg-white dark:bg-gray-800 p-8 rounded-none shadow-sm border border-gray-300 dark:border-gray-600 text-center text-gray-400 dark:text-gray-500">
           {{ activeSection }} page — coming soon.
         </div>
 
@@ -457,7 +457,7 @@
         <div v-else-if="scheduleDates.length === 0" class="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
           No unavailable dates marked yet.
         </div>
-        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-none">
+        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-300 dark:border-gray-600 rounded-none">
           <div v-for="d in scheduleDates" :key="d.id" class="flex items-center justify-between px-4 py-2.5">
             <div>
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ formatDate(d.unavailable_date) }}</p>

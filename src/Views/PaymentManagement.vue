@@ -179,7 +179,7 @@
           </div>
           <div
             v-for="p in filteredPayments" :key="p.payment_id"
-            class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-none p-4"
+            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
               <div class="min-w-0">
@@ -250,7 +250,7 @@
         </div>
 
         <!-- Payments Table — desktop / tablet -->
-        <div class="hidden md:block bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">

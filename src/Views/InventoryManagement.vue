@@ -168,29 +168,29 @@
 
         <!-- Summary -->
         <div v-if="!isLoading && items.length" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+          <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Items</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1 tabular-nums">{{ items.length }}</p>
           </div>
-          <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+          <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Stock value</p>
             <p class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1 tabular-nums">₱{{ formatMoney(totalStockValue) }}</p>
           </div>
-          <button type="button" @click="levelFilter = lowStockItems.length ? 'low' : 'near'" class="text-left bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 hover:border-amber-400">
+          <button type="button" @click="levelFilter = lowStockItems.length ? 'low' : 'near'" class="text-left bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 hover:border-amber-400">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Needs restock</p>
             <p :class="lowStockItems.length ? 'text-red-600 dark:text-red-400' : nearLowItems.length ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'" class="text-2xl font-bold mt-1 tabular-nums">
               {{ lowStockItems.length + nearLowItems.length }}
               <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ lowStockItems.length }} low · {{ nearLowItems.length }} running low</span>
             </p>
           </button>
-          <button type="button" @click="levelFilter = 'expiring'" class="text-left bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 hover:border-amber-400">
+          <button type="button" @click="levelFilter = 'expiring'" class="text-left bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 hover:border-amber-400">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Expiring (within {{ EXPIRING_SOON_DAYS }} days)</p>
             <p :class="expiringItems.length ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'" class="text-2xl font-bold mt-1 tabular-nums">{{ expiringItems.length }}</p>
           </button>
         </div>
 
         <!-- Low Stock Alert -->
-        <div v-if="lowStockItems.length > 0" role="alert" class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-red-200 dark:border-red-900/60 border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20 p-3">
+        <div v-if="lowStockItems.length > 0" role="alert" class="rounded-xl mb-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-red-200 dark:border-red-900/60 border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20 p-3">
           <div class="flex gap-2 flex-1 min-w-0 text-red-700 dark:text-red-300 text-sm font-medium">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86l-8.18 14.14A2 2 0 003.82 21h16.36a2 2 0 001.71-3l-8.18-14.14a2 2 0 00-3.42 0z" />
@@ -204,7 +204,7 @@
         </div>
 
         <!-- Expiry alert -->
-        <div v-if="expiryAlertItems.length > 0" role="alert" class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-amber-200 dark:border-amber-900/60 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20 p-3">
+        <div v-if="expiryAlertItems.length > 0" role="alert" class="rounded-xl mb-4 flex flex-col sm:flex-row sm:items-center gap-3 border border-amber-200 dark:border-amber-900/60 border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20 p-3">
           <div class="flex gap-2 flex-1 min-w-0 text-amber-800 dark:text-amber-300 text-sm font-medium">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -223,7 +223,7 @@
         </div>
 
         <!-- Needs for upcoming events -->
-        <div class="mb-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+        <div class="mb-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl">
           <button type="button" @click="showForecast = !showForecast" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left" :aria-expanded="showForecast">
             <div class="min-w-0">
               <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">Needs for upcoming events</p>
@@ -335,7 +335,7 @@
           </div>
           <div
             v-for="i in filteredItems" :key="i.item_id"
-            class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-none p-4"
+            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
               <div class="min-w-0">
@@ -399,7 +399,7 @@
         </div>
 
         <!-- Inventory Table — desktop / tablet -->
-        <div class="hidden md:block bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
@@ -484,7 +484,7 @@
 
     <!-- ============ CREATE / EDIT MODAL ============ -->
     <div v-if="showFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{{ editingItem ? 'Edit Item' : 'New Item' }}</h3>
 
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -563,7 +563,7 @@
 
     <!-- ============ DELETE CONFIRM MODAL ============ -->
     <div v-if="itemToDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-sm p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Item?</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">
           This will permanently remove <span class="font-semibold text-gray-700 dark:text-gray-200">{{ itemToDelete.item_name }}</span> from inventory.
@@ -583,7 +583,7 @@
 
     <!-- ============ STOCK IN / OUT MODAL ============ -->
     <div v-if="showAdjustModal && adjustItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Adjust Stock</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
           <span class="font-semibold text-gray-700 dark:text-gray-200">{{ adjustItem.item_name }}</span>

@@ -154,7 +154,7 @@
 
         <!-- Summary cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <div v-for="c in summaryCards" :key="c.label" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm px-4 py-3">
+          <div v-for="c in summaryCards" :key="c.label" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm px-4 py-3">
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ c.label }}</p>
             <p class="text-2xl font-bold mt-1" :class="c.cls">{{ isLoadingUsers ? '–' : c.value }}</p>
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{{ c.sub }}</p>
@@ -232,7 +232,7 @@
           <button @click="selected = []" class="h-9 px-3 text-xs font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900">Clear</button>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
 
           <div v-if="isLoadingUsers" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">Loading team...</div>
 
@@ -603,7 +603,7 @@
         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">Marked unavailable</p>
         <div v-if="isLoadingSchedule" class="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">Loading...</div>
         <div v-else-if="scheduleDates.length === 0" class="text-center py-5 text-gray-400 dark:text-gray-500 text-sm">No unavailable dates marked yet.</div>
-        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 rounded-none max-h-44 overflow-y-auto">
+        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-300 dark:border-gray-600 rounded-none max-h-44 overflow-y-auto">
           <div v-for="d in scheduleDates" :key="d.id" class="flex items-center justify-between px-4 py-2.5">
             <div>
               <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ formatDate(d.unavailable_date) }}</p>
@@ -616,7 +616,7 @@
 
         <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mt-4 mb-1.5">Assigned events</p>
         <div v-if="scheduleEvents.length === 0" class="text-sm text-gray-400 dark:text-gray-500">No upcoming events assigned.</div>
-        <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700 max-h-40 overflow-y-auto">
+        <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-300 dark:border-gray-600 max-h-40 overflow-y-auto">
           <li v-for="e in scheduleEvents" :key="e.booking_id" class="px-4 py-2">
             <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ formatDate(e.event_date) }} <span v-if="e.event_time" class="text-gray-500 dark:text-gray-400 font-normal">· {{ e.event_time }}</span></p>
             <p class="text-xs text-gray-500 dark:text-gray-400">{{ e.client_name }}<span v-if="e.package_name"> · {{ e.package_name }}</span></p>
@@ -635,7 +635,7 @@
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">{{ eventsModalUser.full_name }}'s Assigned Events</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Pending and confirmed events this person is assigned to.</p>
         <div v-if="eventsModalList.length === 0" class="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">No upcoming events assigned.</div>
-        <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700">
+        <ul v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
           <li v-for="e in eventsModalList" :key="e.booking_id" class="px-4 py-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">

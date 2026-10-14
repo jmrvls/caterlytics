@@ -148,7 +148,7 @@
           </div>
 
           <div class="hidden sm:block overflow-x-auto print:hidden">
-            <div class="flex gap-1 bg-white dark:bg-gray-800 p-1 rounded-none border border-gray-100 dark:border-gray-700 w-max min-h-[44px]">
+            <div class="flex gap-1 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-300 dark:border-gray-600 w-max min-h-[44px]">
               <button
                 v-for="tab in tabs" :key="tab"
                 @click="activeTab = tab"
@@ -199,7 +199,7 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 text-center py-14 text-gray-400 dark:text-gray-500">
+        <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 text-center py-14 text-gray-400 dark:text-gray-500">
           Loading report data...
         </div>
 
@@ -209,37 +209,37 @@
           <div v-if="activeTab === 'Overview'">
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Revenue Collected</h3>
                 <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(revenueCollected) }}</p>
               </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Total Expenses</h3>
                 <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(totalExpenses) }}</p>
               </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Gross Profit</h3>
                 <p class="text-xl font-semibold mt-1" :class="grossProfit >= 0 ? 'text-emerald-600' : 'text-red-500'">₱{{ formatPrice(grossProfit) }}</p>
               </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Outstanding Balance</h3>
                 <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(outstandingBalance) }}</p>
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4 mb-6">
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Total Billed</h3>
                 <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">₱{{ formatPrice(totalBilled) }}</p>
               </div>
-              <div class="bg-white dark:bg-gray-800 p-5 rounded-none border border-gray-100 dark:border-gray-700">
+              <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-300 dark:border-gray-600">
                 <h3 class="text-xs font-bold text-gray-400 dark:text-gray-500 tracking-wide">Low Stock Items</h3>
                 <p class="text-xl font-semibold text-gray-900 dark:text-gray-100 mt-1">{{ lowStockItems.length }}</p>
               </div>
             </div>
 
             <!-- Booking status breakdown (simple bar chart, no chart lib needed) -->
-            <div class="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 p-5">
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 p-5">
               <h3 class="font-bold text-gray-800 dark:text-gray-100 mb-4">Bookings by Status</h3>
               <div v-if="filteredBookings.length === 0" class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">No bookings in this range.</div>
               <div v-else class="space-y-3">
@@ -256,7 +256,7 @@
 
           <!-- ============ SALES REPORT TAB ============ -->
           <div v-else-if="activeTab === 'Sales Report'">
-            <div class="rounded-none border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="rounded-none border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-gray-100">Sales Records ({{ filteredPayments.length }})</h3>
                 <p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">Total Collected: ₱{{ formatPrice(revenueCollected) }}</p>
@@ -333,7 +333,7 @@
 
           <!-- ============ BOOKINGS REPORT TAB ============ -->
           <div v-else-if="activeTab === 'Bookings Report'">
-            <div class="rounded-none border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="rounded-none border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-gray-100">Booking Records ({{ filteredBookings.length }})</h3>
               </div>
@@ -430,7 +430,7 @@
               <span>{{ lowStockItems.length }} item(s) at or below their low-stock threshold.</span>
             </div>
 
-            <div class="rounded-none border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="rounded-none border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
                 <h3 class="font-bold text-gray-800 dark:text-gray-100">Inventory Levels ({{ inventory.length }})</h3>
               </div>
@@ -508,7 +508,7 @@
               </button>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 overflow-hidden">
               <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-gray-100">Expenses ({{ filteredExpenses.length }})</h3>
                 <p class="text-sm font-bold text-red-500 dark:text-red-400">Total: ₱{{ formatPrice(totalExpenses) }}</p>

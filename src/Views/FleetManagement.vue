@@ -164,21 +164,21 @@
 
           <!-- Summary cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Vehicles available</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ summary.available }}<span class="text-sm font-medium text-gray-400"> / {{ vehicles.length }}</span></p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ summary.onDelivery }} on delivery · {{ summary.maintenance }} in maintenance</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Deliveries on {{ formatDateOnly(runDate) }}</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ rows.length }}</p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ summary.delivered }} delivered · {{ summary.enRoute }} en route</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Needs vehicle or driver</p>
               <p :class="summary.needsAssignment ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'" class="text-xl sm:text-2xl font-bold">{{ summary.needsAssignment }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Drivers free today</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ summary.driversFree }}<span class="text-sm font-medium text-gray-400"> / {{ drivers.length }}</span></p>
               <p v-if="!drivers.length" class="text-xs text-gray-400 dark:text-gray-500 mt-1">Set a Staff member's position to "Driver"</p>
@@ -202,11 +202,11 @@
               </button>
             </div>
 
-            <div v-if="!rows.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+            <div v-if="!rows.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
               No deliveries scheduled for this date. Tap "Add event to deliveries" to pull in a confirmed booking.
             </div>
 
-            <div v-else class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            <div v-else class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl divide-y divide-gray-100 dark:divide-gray-700">
               <div v-for="d in rows" :key="d.delivery_id" class="p-4">
                 <div class="flex flex-col lg:flex-row lg:items-start gap-4">
                   <!-- Who / where -->
@@ -276,12 +276,12 @@
               </button>
             </div>
 
-            <div v-if="!vehicles.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+            <div v-if="!vehicles.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
               No vehicles yet. Add your first catering van.
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              <div v-for="v in vehicles" :key="v.vehicle_id" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+              <div v-for="v in vehicles" :key="v.vehicle_id" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <p class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ v.name }}</p>
@@ -342,16 +342,16 @@
               </div>
             </div>
 
-            <div v-if="!plannerVehicleId" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+            <div v-if="!plannerVehicleId" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
               Choose a vehicle that has deliveries assigned on {{ formatDateOnly(runDate) }}.
             </div>
-            <div v-else-if="!plannerRows.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
+            <div v-else-if="!plannerRows.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
               This vehicle has no deliveries on this date. Assign some from the Dispatch board first.
             </div>
 
             <div v-else class="grid grid-cols-1 xl:grid-cols-5 gap-4">
               <!-- Stops -->
-              <div class="xl:col-span-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+              <div class="xl:col-span-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl">
                 <div class="flex items-center justify-between gap-2 p-4 border-b border-gray-100 dark:border-gray-700">
                   <h2 class="font-semibold text-gray-800 dark:text-gray-100">
                     Stops <span v-if="preview" class="ml-2 text-xs font-semibold text-amber-600 dark:text-amber-400">Preview — not saved yet</span>
@@ -394,7 +394,7 @@
 
               <!-- Summary + map -->
               <div class="xl:col-span-2 space-y-4">
-                <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+                <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
                   <div class="grid grid-cols-3 gap-3 text-center">
                     <div>
                       <p class="text-xs text-gray-500 dark:text-gray-400">Distance</p>
@@ -421,9 +421,9 @@
                   <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-3">Distances are estimates from straight-line distance plus a road factor, at {{ speedKph }} km/h, with {{ SERVICE_MIN }} min unloading per stop. They do not include live traffic. Google Maps has the real turn-by-turn route.</p>
                 </div>
 
-                <div v-if="basePoint && mapPoints.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+                <div v-if="basePoint && mapPoints.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
                   <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-2">Route sketch</h2>
-                  <svg :viewBox="`0 0 ${MAP_W} ${MAP_H}`" class="w-full h-auto bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700">
+                  <svg :viewBox="`0 0 ${MAP_W} ${MAP_H}`" class="w-full h-auto bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600">
                     <polyline :points="polylinePoints" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="5 3" />
                     <rect :x="mapBase.x - 7" :y="mapBase.y - 7" width="14" height="14" fill="#1f2937" />
                     <text :x="mapBase.x" :y="mapBase.y + 3.5" text-anchor="middle" font-size="9" fill="#ffffff" font-weight="700">B</text>
@@ -450,7 +450,7 @@
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-3">{{ modalError }}</div>
         <div v-if="loadingBookings" class="text-center py-8 text-gray-400 text-sm">Loading bookings...</div>
         <div v-else-if="!schedulable.length" class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No confirmed bookings are waiting to be scheduled.</div>
-        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700">
+        <div v-else class="divide-y divide-gray-100 dark:divide-gray-700 border border-gray-300 dark:border-gray-600">
           <div v-for="b in schedulable" :key="b.booking_id" class="p-3 flex items-center gap-3">
             <div class="flex-1 min-w-0">
               <p class="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{{ b.client_name }}</p>

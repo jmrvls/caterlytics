@@ -171,12 +171,12 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 text-center py-14 text-gray-400 dark:text-gray-500">
+        <div v-if="isLoading" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 text-center py-14 text-gray-400 dark:text-gray-500">
           Loading packages...
         </div>
 
         <!-- Empty state -->
-        <div v-else-if="filteredPackages.length === 0" class="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 text-center py-14 text-gray-400 dark:text-gray-500">
+        <div v-else-if="filteredPackages.length === 0" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-300 dark:border-gray-600 text-center py-14 text-gray-400 dark:text-gray-500">
           {{ packages.length === 0 ? 'No packages yet. Click "New Package" to add one.' : 'No packages match your search.' }}
         </div>
 
@@ -186,7 +186,7 @@
             v-for="pkg in filteredPackages"
             :key="pkg.package_id"
             :class="tierAccent(pkg.package_name).border"
-            class="bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 border-t-4 flex flex-col hover:border-emerald-200 dark:hover:border-emerald-700 transition"
+            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 border-t-4 flex flex-col hover:border-emerald-200 dark:hover:border-emerald-700 transition"
           >
             <!-- Photo: same height for every card; click to see the whole picture -->
             <button
@@ -287,7 +287,7 @@
         </div>
 
         <div v-else class="space-y-4">
-          <div v-for="cat in MENU_CATEGORIES" :key="cat" class="border border-gray-100 dark:border-gray-700 rounded-none p-4">
+          <div v-for="cat in MENU_CATEGORIES" :key="cat" class="border border-gray-300 dark:border-gray-600 rounded-none p-4">
             <div class="flex items-center justify-between gap-3 mb-3">
               <h4 class="font-semibold text-gray-800 dark:text-gray-100">{{ cat }}</h4>
               <div class="flex items-center gap-2 text-sm flex-shrink-0">
@@ -352,7 +352,7 @@
         </div>
 
         <div v-else class="space-y-3">
-          <div v-if="inventoryItems.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-none p-4 text-center">
+          <div v-if="inventoryItems.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none p-4 text-center">
             No inventory items yet. Add stock items in the Inventory page first.
           </div>
 
@@ -525,7 +525,7 @@
             >{{ c.name }} <span class="opacity-70">({{ c.count }})</span></button>
           </div>
           <p v-if="addons.length > 0 && visibleAddons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-3">No add-ons match your search.</p>
-          <div v-if="addons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-none p-4 text-center">
+          <div v-if="addons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none p-4 text-center">
             No add-ons yet. Add your first one below.
           </div>
           <template v-for="(a, i) in visibleAddons" :key="a.addon_id">

@@ -171,11 +171,11 @@
         <template v-else-if="!setupMissing">
           <!-- Summary cards -->
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total waste cost</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100 break-words">{{ formatPeso(summary.totalCost) }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">vs previous period</p>
               <p v-if="summary.changePct === null" class="text-xl sm:text-2xl font-bold text-gray-400 dark:text-gray-500">N/A</p>
               <p v-else :class="summary.changePct > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'" class="text-xl sm:text-2xl font-bold">
@@ -184,18 +184,18 @@
               <p v-if="summary.changePct !== null" class="text-xs text-gray-400 dark:text-gray-500 mt-1">Previously {{ formatPeso(summary.prevCost) }}</p>
               <p v-else class="text-xs text-gray-400 dark:text-gray-500 mt-1">No waste logged in the previous period</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Waste entries</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ summary.entries }}</p>
             </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Top cause</p>
               <p class="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100 break-words">{{ summary.byReason[0]?.reason || '—' }}</p>
             </div>
           </div>
 
           <!-- Insights -->
-          <div v-if="insights.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5 mb-6">
+          <div v-if="insights.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5 mb-6">
             <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-3">How to reduce waste</h2>
             <ul class="space-y-2">
               <li v-for="(tip, idx) in insights" :key="idx" class="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
@@ -206,7 +206,7 @@
           </div>
 
           <!-- Reorder suggestions (waste + real usage) -->
-          <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5 mb-6">
+          <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5 mb-6">
             <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
               <div>
                 <h2 class="font-semibold text-gray-800 dark:text-gray-100">Reorder suggestions</h2>
@@ -258,14 +258,14 @@
             </template>
           </div>
 
-          <div v-if="!summary.entries" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-12 text-gray-400 dark:text-gray-500 text-sm mb-6">
+          <div v-if="!summary.entries" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-12 text-gray-400 dark:text-gray-500 text-sm mb-6">
             No waste logged in this period. Tap "Log Waste" whenever food is thrown away so the numbers stay accurate.
           </div>
 
           <template v-else>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
               <!-- By reason -->
-              <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5">
+              <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5">
                 <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Waste by reason</h2>
                 <div class="space-y-3">
                   <div v-for="r in summary.byReason" :key="r.reason">
@@ -281,7 +281,7 @@
               </div>
 
               <!-- Top wasted items -->
-              <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5">
+              <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5">
                 <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Most wasted items</h2>
                 <div class="space-y-3">
                   <div v-for="(it, idx) in summary.topItems.slice(0, 5)" :key="it.key" class="flex items-center gap-3">
@@ -297,7 +297,7 @@
             </div>
 
             <!-- Trend -->
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 sm:p-5 mb-6">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 sm:p-5 mb-6">
               <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-1">Waste cost over time</h2>
               <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">{{ rangeDays > 31 ? 'Per week' : 'Per day' }}</p>
               <div class="flex items-end gap-1 h-36 overflow-x-auto">
@@ -315,7 +315,7 @@
             </div>
 
             <!-- Log list -->
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl">
               <div class="flex flex-col sm:flex-row gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
                 <h2 class="font-semibold text-gray-800 dark:text-gray-100 sm:flex-1 sm:self-center">Waste log</h2>
                 <input v-model="searchQuery" type="text" placeholder="Search item or note..." class="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />

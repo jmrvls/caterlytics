@@ -160,6 +160,26 @@
         <div v-if="isLoading" class="text-center py-16 text-gray-400 dark:text-gray-500 text-sm">Loading documents...</div>
 
         <template v-else-if="!setupMissing">
+          <!-- Summary cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total documents</p>
+              <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ summary.total }}</p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Valid</p>
+              <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ summary.valid + summary.none }}</p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Expiring soon</p>
+              <p class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{{ summary.expiring }}</p>
+            </div>
+            <div class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Expired</p>
+              <p class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{{ summary.expired }}</p>
+            </div>
+          </div>
+
           <!-- Renewal alert -->
           <div v-if="summary.expired || summary.expiring" class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm p-4 mb-4">
             <span v-if="summary.expired" class="font-semibold">{{ summary.expired }} expired</span>
@@ -170,7 +190,7 @@
           </div>
 
           <!-- License compliance (verified by the platform admin) -->
-          <div v-if="verificationReady" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 mb-6">
+          <div v-if="verificationReady" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 mb-6">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div>
                 <h2 class="font-bold text-gray-800 dark:text-gray-100">License compliance</h2>
@@ -181,7 +201,7 @@
               </span>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div v-for="item in compliance.items" :key="item.type" class="flex items-start justify-between gap-2 border border-gray-100 dark:border-gray-700 px-3 py-2">
+              <div v-for="item in compliance.items" :key="item.type" class="flex items-start justify-between gap-2 border border-gray-300 dark:border-gray-600 px-3 py-2">
                 <div class="min-w-0">
                   <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.type }}</p>
                   <p v-if="item.state === 'rejected' && item.doc?.verification_note" class="text-xs text-red-600 dark:text-red-400 break-words">{{ item.doc.verification_note }}</p>
@@ -195,26 +215,6 @@
           </div>
           <div v-else-if="verificationUnavailable" class="border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm p-4 mb-4">
             License verification needs a one-time database setup. Run <span class="font-mono font-semibold">license_verification.sql</span> in the Supabase SQL Editor, then refresh this page.
-          </div>
-
-          <!-- Summary cards -->
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total documents</p>
-              <p class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{{ summary.total }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Valid</p>
-              <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ summary.valid + summary.none }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Expiring soon</p>
-              <p class="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{{ summary.expiring }}</p>
-            </div>
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4">
-              <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Expired</p>
-              <p class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{{ summary.expired }}</p>
-            </div>
           </div>
 
           <!-- Filters -->
@@ -234,13 +234,13 @@
           </div>
 
           <!-- Empty state -->
-          <div v-if="!docs.length" class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-center py-16 px-4">
+          <div v-if="!docs.length" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-center py-16 px-4">
             <p class="font-semibold text-gray-800 dark:text-gray-100 mb-1">No documents yet</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Upload your business permits, client contracts and compliance certificates to keep them in one place.</p>
             <button @click="openUpload()" class="bg-emerald-600 text-white px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 transition">Upload your first document</button>
           </div>
 
-          <div v-else class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+          <div v-else class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl">
             <!-- Mobile cards -->
             <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
               <p v-if="!filteredDocs.length" class="text-center py-8 text-sm text-gray-400 dark:text-gray-500">No documents match.</p>
