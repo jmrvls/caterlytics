@@ -282,6 +282,11 @@
               </ul>
             </div>
 
+            <div v-if="addonsFor(b.booking_id).length" class="mb-2.5 text-xs text-gray-600 dark:text-gray-300">
+              <p class="font-semibold text-emerald-600 dark:text-emerald-400">Add-ons (+₱{{ sumAddons(addonsFor(b.booking_id)).toLocaleString('en-PH') }})</p>
+              <p v-for="a in addonsFor(b.booking_id)" :key="a.addon_id">{{ a.addon_name }} ×{{ a.quantity }}</p>
+            </div>
+
             <div class="flex items-center gap-1.5 flex-wrap mb-2.5">
               <span v-if="assignedStaffNames(b.booking_id).length === 0" class="text-xs text-gray-400 dark:text-gray-500">No staff assigned</span>
               <span v-for="name in assignedStaffNames(b.booking_id)" :key="name" class="px-2 py-0.5 rounded-full text-[11px] font-semibold text-gray-900 dark:text-gray-100">
@@ -366,6 +371,10 @@
                   <td class="px-2 2xl:px-4 py-3.5 text-gray-600 dark:text-gray-300">
                     <div class="whitespace-nowrap">{{ b.package_name || '—' }}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ b.guest_count }} guests</div>
+                    <div v-if="addonsFor(b.booking_id).length" class="mt-1 text-xs min-w-[11rem]">
+                      <span class="font-semibold text-emerald-600 dark:text-emerald-400">Add-ons:</span>
+                      <span v-for="(a, i) in addonsFor(b.booking_id)" :key="a.addon_id" class="text-gray-600 dark:text-gray-300">{{ i ? ', ' : ' ' }}{{ a.addon_name }} ×{{ a.quantity }}</span>
+                    </div>
                     <div v-if="menuPicksFor(b.booking_id).length" class="mt-1">
                       <button type="button" @click="toggleMenuRow(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
                         {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `View menu (${menuPicksFor(b.booking_id).length})` }}
@@ -742,6 +751,7 @@ import {
   getSelectionsForBookings
 } from '../services/bookingService'
 import { getAllPackages, getPackageMenu, getAllMenuItems } from '../services/packageService'
+import { getAddonsForBookings, sumAddons } from '../services/addonService'
 import { sendBookingConfirmationSms, sendBookingCancellationSms } from '../services/smsService'
 import {
   getAssignableStaff,
@@ -1009,7 +1019,22 @@ function toggleMenuRow(id) {
   next.has(id) ? next.delete(id) : next.add(id)
   expandedMenuRows.value = next
 }
+// Add-ons (extras) each client attached, so staff/kitchen can see them.
+const addonsByBooking = ref({})
+function addonsFor(bookingId) {
+  return addonsByBooking.value[bookingId] || []
+}
+async function loadAddonsFor(rows) {
+  try {
+    const map = await getAddonsForBookings(rows.map((b) => b.booking_id))
+    const filled = Object.fromEntries(rows.map((b) => [b.booking_id, map[b.booking_id] || []]))
+    addonsByBooking.value = { ...addonsByBooking.value, ...filled }
+  } catch (error) {
+    console.error('Failed to load add-ons:', error)
+  }
+}
 async function loadMenuPicksFor(rows) {
+  loadAddonsFor(rows)
   try {
     const map = await getSelectionsForBookings(rows.map((b) => b.booking_id))
     // Bookings with no picks get an explicit empty list so stale data clears.

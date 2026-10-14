@@ -257,7 +257,7 @@
     </main>
 
     <!-- ============ MANAGE MENU MODAL (main module) ============ -->
-    <div v-if="showMenuModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div v-if="showMenuModal" @mousedown.self="closeMenuModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Menu — {{ menuPackage?.package_name }}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
@@ -322,7 +322,7 @@
     </div>
 
     <!-- ============ MANAGE INGREDIENTS MODAL ============ -->
-    <div v-if="showIngredientsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div v-if="showIngredientsModal" @mousedown.self="closeIngredientsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Ingredients — {{ ingredientsPackage?.package_name }}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
@@ -396,7 +396,7 @@
     </div>
 
     <!-- ============ CREATE / EDIT PACKAGE MODAL ============ -->
-    <div v-if="showFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div v-if="showFormModal" @mousedown.self="closeFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{{ isEditing ? 'Edit Package' : 'New Package' }}</h3>
 
@@ -478,7 +478,7 @@
     </div>
 
     <!-- ============ MANAGE ADD-ONS MODAL (ala carte extras) ============ -->
-    <div v-if="showAddonsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div v-if="showAddonsModal" @mousedown.self="closeAddonsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Add-Ons</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
@@ -494,21 +494,33 @@
         </div>
 
         <div v-else class="space-y-2 mb-5">
+          <input
+            v-if="addons.length > 5"
+            v-model="addonSearch" type="search" placeholder="Search add-ons..."
+            class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+          />
+          <p v-if="addons.length > 0 && visibleAddons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-3">No add-ons match your search.</p>
           <div v-if="addons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-none p-4 text-center">
             No add-ons yet. Add your first one below.
           </div>
           <div
-            v-for="a in addons"
+            v-for="a in visibleAddons"
             :key="a.addon_id"
-            class="flex items-center justify-between gap-3 border border-gray-100 dark:border-gray-700 rounded-none p-3"
+            :class="editingAddonId === a.addon_id ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20' : 'border-gray-100 dark:border-gray-700'"
+            class="flex items-center justify-between gap-3 border rounded-none p-3"
           >
             <div class="min-w-0">
               <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" :class="{ 'opacity-50 line-through': !a.is_active }">{{ a.addon_name }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">₱{{ formatPrice(a.price) }} · {{ a.unit_label }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">₱{{ formatPrice(a.price) }} · {{ a.unit_label }}<template v-if="addonUsage[a.addon_id]"> · used in {{ addonUsage[a.addon_id] }} booking{{ addonUsage[a.addon_id] === 1 ? '' : 's' }}</template></p>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
               <button type="button" @click="toggleAddonActive(a)" class="text-xs font-semibold px-2 py-1 rounded-none" :class="a.is_active ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'">
                 {{ a.is_active ? 'Active' : 'Hidden' }}
+              </button>
+              <button type="button" @click="duplicateAddon(a)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Duplicate">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
               </button>
               <button type="button" @click="startEditAddon(a)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Edit">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -525,7 +537,7 @@
         </div>
 
         <!-- Add / Edit form -->
-        <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
+        <div ref="addonFormEl" class="border-t border-gray-100 dark:border-gray-700 pt-4">
           <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">{{ editingAddonId ? 'Edit Add-On' : 'New Add-On' }}</p>
           <div v-if="addonFormError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-3">{{ addonFormError }}</div>
           <form @submit.prevent="handleSaveAddon" class="space-y-3">
@@ -566,15 +578,21 @@
     </div>
 
     <!-- ============ DELETE ADD-ON CONFIRM MODAL ============ -->
-    <div v-if="addonToDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
+    <div v-if="addonToDelete" @mousedown.self="addonToDelete = null" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-sm p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete this add-on?</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
           <span class="font-semibold text-gray-700 dark:text-gray-200">{{ addonToDelete.addon_name }}</span> will no longer be offered to clients. Bookings that already included it keep their own saved copy.
         </p>
+        <p v-if="addonUsage[addonToDelete.addon_id] && addonToDelete.is_active" class="text-sm text-amber-700 dark:text-amber-300 mb-2">
+          Used in {{ addonUsage[addonToDelete.addon_id] }} booking{{ addonUsage[addonToDelete.addon_id] === 1 ? '' : 's' }}. Hiding it instead keeps it in your list but stops clients from picking it.
+        </p>
         <div class="flex gap-3 mt-3">
           <button @click="addonToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
+          </button>
+          <button v-if="addonUsage[addonToDelete.addon_id] && addonToDelete.is_active" @click="hideAddonInstead" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700">
+            Hide instead
           </button>
           <button @click="handleDeleteAddon" :disabled="isDeletingAddon" class="flex-1 bg-red-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
             {{ isDeletingAddon ? 'Deleting...' : 'Delete' }}
@@ -584,7 +602,7 @@
     </div>
 
     <!-- ============ DELETE CONFIRM MODAL ============ -->
-    <div v-if="packageToDelete" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div v-if="packageToDelete" @mousedown.self="packageToDelete = null" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-sm p-6">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete Package?</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -612,7 +630,7 @@ import { logoutUser } from '../services/authService'
 import { validateImageFile } from '../utils/validators'
 import { resetNotifications } from '../composables/useNotifications'
 import logoUrl from '../Assets/logofinal.png'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import NotificationBell from '../Components/NotificationBell.vue'
 import { useSidebarState } from '../composables/useSidebarState'
 import { useChatUnread } from '../composables/useChatUnread'
@@ -635,7 +653,7 @@ import {
 } from '../services/packageService'
 import { getAllInventory } from '../services/inventoryService'
 import { getPackagePhotos, uploadPackagePhoto, deletePackagePhoto } from '../services/catalogService'
-import { getMyAddons, createAddon, updateAddon, deleteAddon } from '../services/addonService'
+import { getMyAddons, createAddon, updateAddon, deleteAddon, getAddonUsageCounts } from '../services/addonService'
 
 const router = useRouter()
 
@@ -728,6 +746,25 @@ const isDeletingAddon = ref(false)
 
 const emptyAddonForm = () => ({ addon_name: '', description: '', price: null, unit_label: 'per booking', is_active: true })
 const addonForm = ref(emptyAddonForm())
+const addonSearch = ref('')
+const addonFormEl = ref(null)
+
+// The form sits below the (long) list, so bring it into view and focus the name.
+function focusAddonForm() {
+  nextTick(() => {
+    addonFormEl.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    addonFormEl.value?.querySelector('input')?.focus({ preventScroll: true })
+  })
+}
+const addonUsage = ref({}) // { [addon_id]: number of bookings using it }
+
+// Active add-ons first, hidden ones at the bottom; filtered by the search box.
+const visibleAddons = computed(() => {
+  const q = addonSearch.value.trim().toLowerCase()
+  return addons.value
+    .filter((a) => !q || `${a.addon_name} ${a.description || ''}`.toLowerCase().includes(q))
+    .sort((a, b) => Number(b.is_active) - Number(a.is_active) || String(a.addon_name).localeCompare(String(b.addon_name)))
+})
 
 async function openAddonsModal() {
   showAddonsModal.value = true
@@ -736,6 +773,7 @@ async function openAddonsModal() {
 
 function closeAddonsModal() {
   showAddonsModal.value = false
+  addonSearch.value = ''
   cancelEditAddon()
 }
 
@@ -744,6 +782,7 @@ async function loadAddons() {
   addonsError.value = ''
   try {
     addons.value = await getMyAddons()
+    getAddonUsageCounts().then((c) => { addonUsage.value = c })
   } catch (err) {
     addonsError.value = err.message || 'Failed to load add-ons.'
   } finally {
@@ -761,6 +800,20 @@ function startEditAddon(addon) {
     is_active: addon.is_active,
   }
   addonFormError.value = ''
+  focusAddonForm()
+}
+
+function duplicateAddon(addon) {
+  editingAddonId.value = null
+  addonForm.value = {
+    addon_name: `${addon.addon_name} (copy)`,
+    description: addon.description || '',
+    price: addon.price,
+    unit_label: addon.unit_label,
+    is_active: addon.is_active,
+  }
+  addonFormError.value = ''
+  focusAddonForm()
 }
 
 function cancelEditAddon() {
@@ -770,8 +823,14 @@ function cancelEditAddon() {
 }
 
 async function handleSaveAddon() {
-  isSavingAddon.value = true
   addonFormError.value = ''
+  const nameKey = String(addonForm.value.addon_name || '').trim().toLowerCase()
+  const clash = addons.value.some((a) => a.addon_id !== editingAddonId.value && String(a.addon_name).trim().toLowerCase() === nameKey)
+  if (clash) {
+    addonFormError.value = 'You already have an add-on with this name. Use a different name (e.g. add the size).'
+    return
+  }
+  isSavingAddon.value = true
   try {
     if (editingAddonId.value) {
       await updateAddon(editingAddonId.value, addonForm.value)
@@ -798,6 +857,12 @@ async function toggleAddonActive(addon) {
 
 function confirmDeleteAddon(addon) {
   addonToDelete.value = addon
+}
+
+async function hideAddonInstead() {
+  const a = addonToDelete.value
+  addonToDelete.value = null
+  if (a?.is_active) await toggleAddonActive(a)
 }
 
 async function handleDeleteAddon() {

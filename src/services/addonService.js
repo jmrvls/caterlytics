@@ -65,6 +65,16 @@ export async function deleteAddon(addonId) {
   return { message: 'Add-on deleted successfully' };
 }
 
+// How many bookings use each add-on, as { [addon_id]: count }. Best effort:
+// if the table can't be read the modal just doesn't show counts.
+export async function getAddonUsageCounts() {
+  const { data, error } = await supabase.from('tbl_booking_addons').select('addon_id');
+  if (error) return {};
+  const counts = {};
+  for (const row of data || []) counts[row.addon_id] = (counts[row.addon_id] || 0) + 1;
+  return counts;
+}
+
 // ---------- Browsing (Client side) ----------
 // Active add-ons offered by one specific business, shown while the client
 // is filling out a booking for that business.
@@ -93,6 +103,22 @@ export async function getBookingAddons(bookingId) {
 
   if (error) throw new Error('Failed to load booking add-ons.');
   return data || [];
+}
+
+// Add-ons for many bookings at once (admin booking list), as
+// { [booking_id]: [{ addon_id, addon_name, unit_price, quantity, subtotal }] }.
+export async function getAddonsForBookings(bookingIds) {
+  const ids = [...new Set(bookingIds || [])];
+  if (!ids.length) return {};
+  const { data, error } = await supabase
+    .from('tbl_booking_addons')
+    .select('booking_id, addon_id, addon_name, unit_price, quantity, subtotal')
+    .in('booking_id', ids);
+
+  if (error) throw new Error('Failed to load booking add-ons.');
+  const map = {};
+  for (const row of data || []) (map[row.booking_id] ||= []).push(row);
+  return map;
 }
 
 // Replace a booking's whole add-on list atomically. Price is snapshotted
