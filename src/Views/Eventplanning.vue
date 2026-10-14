@@ -655,6 +655,7 @@
 </template>
 
 <script setup>
+import { canTakePayments } from '../utils/permissions'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { localToday, formatDateOnly } from '../utils/date'
@@ -1231,7 +1232,9 @@ const allNavItems = [
 const staffAllowedSections = ['Dashboard', 'Event Planning', 'Payment Records', 'Support Chat']
 const navItems = computed(() =>
   userRole.value === 'Staff'
-    ? allNavItems.filter(item => staffAllowedSections.includes(item.name))
+    ? allNavItems.filter(item =>
+        staffAllowedSections.includes(item.name) &&
+        (item.name !== 'Payment Records' || canTakePayments()))
     : allNavItems
 )
 

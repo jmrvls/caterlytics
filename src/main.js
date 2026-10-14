@@ -69,7 +69,7 @@ const routes = [
   { path: '/admin/support', component: SupportChat, meta: { requiresAuth: true, roles: ['Admin', 'Staff', 'Owner/Manager'] } },
   { path: '/driver/deliveries', component: DriverDeliveries, meta: { requiresAuth: true, roles: ['Staff'] } },
   { path: '/admin/fleet', component: FleetManagement, meta: { requiresAuth: true, roles: ['Admin', 'Owner/Manager'] } },
-  { path: '/admin/payments', component: PaymentManagement, meta: { requiresAuth: true, roles: ['Admin', 'Staff', 'Owner/Manager'] } },
+  { path: '/admin/payments', component: PaymentManagement, meta: { requiresAuth: true, roles: ['Admin', 'Staff', 'Owner/Manager'], needsPaymentAccess: true } },
   { path: '/admin/branches', component: BranchManagement, meta: { requiresAuth: true, roles: ['Admin', 'Owner/Manager'] } },
   { path: '/admin/staff', component: StaffManagement, meta: { requiresAuth: true, roles: ['Admin', 'Owner/Manager'] } },
   { path: '/admin/reports', component: ReportsAnalytics, meta: { requiresAuth: true, roles: ['Admin', 'Owner/Manager'] } },
@@ -125,11 +125,20 @@ router.beforeEach(async (to) => {
     return '/'
   }
 
-  const { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from('tbl_profiles')
-    .select('username, full_name, role, position, avatar_url, business_id')
+    .select('username, full_name, role, position, avatar_url, business_id, can_take_payments')
     .eq('id', session.user.id)
     .single()
+
+  // 42703 = can_take_payments column not created yet (SQL not run) -- retry without it.
+  if (profileError && profileError.code === '42703') {
+    ;({ data: profile, error: profileError } = await supabase
+      .from('tbl_profiles')
+      .select('username, full_name, role, position, avatar_url, business_id')
+      .eq('id', session.user.id)
+      .single())
+  }
 
   if (profileError || !profile || !profile.role) {
     await supabase.auth.signOut()
@@ -167,16 +176,22 @@ router.beforeEach(async (to) => {
     full_name: profile.full_name,
     role: profile.role,
     position: profile.position || null,
+    can_take_payments: profile.can_take_payments !== false,
     business_id: profile.business_id || null,
     avatar_url: profile.avatar_url || '',
   }
   sessionStorage.setItem('user', JSON.stringify(verifiedUser))
 
+  // Staff the owner hasn't allowed to take payments can't open the Payments page.
+  if (to.meta.needsPaymentAccess && profile.role === 'Staff' && profile.can_take_payments === false) {
+    return profile.position === 'Driver' ? '/driver/deliveries' : '/admin/dashboard'
+  }
+
   if (to.meta.roles && !to.meta.roles.includes(profile.role)) {
     // Send the user back to a page they do have access to instead
     // of letting them in.
     if (profile.role === 'Staff') {
-      return profile.position === 'Driver' ? '/driver/deliveries' : '/admin/payments'
+      return profile.position === 'Driver' ? '/driver/deliveries' : '/admin/dashboard'
     } else if (profile.role === 'Client') {
       return '/client/bookings'
     } else if (profile.role === 'Super Admin') {

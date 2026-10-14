@@ -149,6 +149,7 @@
 </template>
 
 <script setup>
+import { canTakePayments } from '../utils/permissions'
 import { logoutUser } from '../services/authService'
 import { resetNotifications } from '../composables/useNotifications'
 import logoUrl from '../Assets/logofinal.png'
@@ -240,7 +241,9 @@ const allNavItems = [
 const staffAllowedSections = ['Dashboard', 'Event Planning', 'Payment Records', 'Support Chat']
 const navItems = computed(() =>
   userRole.value === 'Staff'
-    ? allNavItems.filter((item) => staffAllowedSections.includes(item.name))
+    ? allNavItems.filter(item =>
+        staffAllowedSections.includes(item.name) &&
+        (item.name !== 'Payment Records' || canTakePayments()))
     : allNavItems
 )
 </script>

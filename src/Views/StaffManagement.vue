@@ -274,6 +274,7 @@
                   <span :class="roleBadge(u.role)" class="inline-block px-2 py-0.5 border rounded-md text-[11px] font-medium">{{ u.role }}</span>
                   <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-200"><span class="w-2 h-2 rounded-full" :class="statusDot(effectiveStatus(u).tone)"></span>{{ effectiveStatus(u).label }}</span>
                   <span v-if="u.position" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ u.position }}</span>
+                  <span v-if="u.role === 'Staff' && u.can_take_payments" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Takes payments</span>
                   <span v-if="isPending(u)" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">Invite pending</span>
                 </div>
 
@@ -490,6 +491,14 @@
               <option value="Other">Other</option>
             </select>
           </div>
+
+          <label v-if="editUser.role === 'Staff'" class="flex items-start gap-3 p-3 border-2 border-gray-300 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40">
+            <input type="checkbox" v-model="editUser.can_take_payments" class="mt-0.5 h-4 w-4 accent-emerald-600" />
+            <span>
+              <span class="block text-sm font-semibold text-gray-900 dark:text-gray-100">Can take payments</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400">Lets this staff record client payments and open Payment Records. Turn off for staff who shouldn't handle money.</span>
+            </span>
+          </label>
 
           <div class="relative">
             <label class="absolute -top-2.5 left-3 bg-white dark:bg-gray-800 px-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Availability</label>
@@ -932,7 +941,7 @@ const newUser = ref({ full_name: '', username: '', email: '', role: '', contact_
 const showEditUserModal = ref(false)
 const isSavingEdit = ref(false)
 const editModalError = ref('')
-const editUser = ref({ id: '', full_name: '', username: '', role: '', contact_number: '', availability: 'Available', position: '' })
+const editUser = ref({ id: '', full_name: '', username: '', role: '', contact_number: '', availability: 'Available', position: '', can_take_payments: true })
 
 const userToDelete = ref(null)
 const isDeletingUser = ref(false)
@@ -1092,7 +1101,8 @@ function openEditUserModal(user) {
     role: user.role,
     contact_number: user.contact_number || '',
     availability: user.availability || 'Available',
-    position: user.position || ''
+    position: user.position || '',
+    can_take_payments: user.can_take_payments !== false
   }
   editModalError.value = ''
   showEditUserModal.value = true
@@ -1130,7 +1140,9 @@ async function handleUpdateUser() {
       role: editUser.value.role,
       contact_number: toLocalMobile(editUser.value.contact_number) || null,
       availability: editUser.value.availability,
-      position: editUser.value.role === 'Staff' ? (editUser.value.position || null) : null
+      position: editUser.value.role === 'Staff' ? (editUser.value.position || null) : null,
+      // Admin/Owner can always take payments; only Staff is switchable.
+      can_take_payments: editUser.value.role === 'Staff' ? !!editUser.value.can_take_payments : true
     })
     showEditUserModal.value = false
     fetchUsers()

@@ -17,6 +17,8 @@ async function functionErrorMessage(error, fallback) {
 }
 
 const PROFILE_COLUMNS = 'id, username, full_name, role, contact_number, availability, position, avatar_url';
+// Optional columns added by later SQL scripts; the page keeps working if they don't exist yet.
+const OPTIONAL_COLUMNS = 'is_active, can_take_payments';
 
 export async function getUsers() {
   const run = (cols) => supabase
@@ -25,12 +27,13 @@ export async function getUsers() {
     .neq('role', 'Client')
     .order('username', { ascending: true });
 
-  let res = await run(`${PROFILE_COLUMNS}, is_active`);
-  // 42703 = column does not exist yet (staff_improvements.sql not run) -- keep the page working.
+  let res = await run(`${PROFILE_COLUMNS}, ${OPTIONAL_COLUMNS}`);
+  // 42703 = column does not exist yet (SQL not run) -- keep the page working.
+  if (res.error && res.error.code === '42703') res = await run(`${PROFILE_COLUMNS}, is_active`);
   if (res.error && res.error.code === '42703') res = await run(PROFILE_COLUMNS);
 
   if (res.error) throw new Error('Failed to fetch users.');
-  return { users: (res.data || []).map((u) => ({ ...u, is_active: u.is_active ?? true })) };
+  return { users: (res.data || []).map((u) => ({ ...u, is_active: u.is_active ?? true, can_take_payments: u.can_take_payments ?? true })) };
 }
 
 export async function createStaffUser(username, email, full_name, role, contact_number, availability, position) {
@@ -57,10 +60,13 @@ export async function createStaffUser(username, email, full_name, role, contact_
 
 // Update an existing staff/admin/owner profile's role, contact details, and
 // availability. (Username/password are managed via Supabase Auth, not here.)
-export async function updateStaffUser(id, { full_name, role, contact_number, availability, position }) {
+export async function updateStaffUser(id, { full_name, role, contact_number, availability, position, can_take_payments }) {
+  const changes = { full_name, role, contact_number, availability, position };
+  // Only sent when provided, so editing still works before the SQL is run.
+  if (can_take_payments !== undefined) changes.can_take_payments = can_take_payments;
   const { data, error } = await supabase
     .from('tbl_profiles')
-    .update({ full_name, role, contact_number, availability, position })
+    .update(changes)
     .eq('id', id)
     .select()
     .single();
@@ -68,6 +74,7 @@ export async function updateStaffUser(id, { full_name, role, contact_number, ava
   if (error) {
     // Database rules (owner profile, role changes) raise readable messages -- show them.
     if (error.code === 'P0001' && error.message) throw new Error(error.message);
+    if (error.code === '42703') throw new Error('Run the can_take_payments SQL in Supabase first (see RUN_THIS_IN_SUPABASE_SQL_EDITOR.sql).');
     if (error.code === '23505') throw new Error('That contact number is already used by another account.');
     if (error.code === 'PGRST116') {
       throw new Error("You don't have permission to edit staff profiles. Only Admin accounts can do this.");

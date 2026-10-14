@@ -169,7 +169,7 @@
           <div class="flex items-start justify-between mb-8">
             <div>
               <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ greetingName }}</h2>
-              <p class="text-gray-500 dark:text-gray-400 mt-1">You can view and manage client payments here.</p>
+              <p class="text-gray-500 dark:text-gray-400 mt-1">{{ canTakePayments() ? 'You can view and manage client payments here.' : 'Check your assigned events and schedule here.' }}</p>
             </div>
             <div class="hidden lg:flex items-center gap-3">
               <span class="text-sm text-gray-400 dark:text-gray-500">{{ todayLabel }}</span>
@@ -177,15 +177,15 @@
             </div>
           </div>
 
-          <!-- Total Revenue -->
-          <div class="mb-6">
+          <!-- Total Revenue (only for staff allowed to take payments) -->
+          <div v-if="canTakePayments()" class="mb-6">
             <span class="block text-sm text-gray-400 dark:text-gray-500 mb-1">Total Revenue</span>
             <span class="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₱{{ isLoadingDashboard ? '…' : formatCurrency(totalRevenue) }}</span>
           </div>
 
           <!-- Quick Actions -->
           <div class="flex flex-wrap items-center gap-3 mb-8 pb-6 border-b border-gray-100 dark:border-gray-700">
-            <button @click="router.push('/admin/payments')" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap">
+            <button v-if="canTakePayments()" @click="router.push('/admin/payments')" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap">
               Go to Payments
             </button>
             <button @click="openScheduleModal({ id: currentUserId, full_name: userName })" class="flex items-center justify-center gap-2 bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-600 dark:border-emerald-500 px-4 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition whitespace-nowrap">
@@ -488,6 +488,7 @@
 </template>
 
 <script setup>
+import { canTakePayments } from '../utils/permissions'
 import { localToday } from '../utils/date'
 import { logoutUser } from '../services/authService'
 import { resetNotifications } from '../composables/useNotifications'
@@ -760,7 +761,7 @@ async function fetchDashboardData(role) {
       // Staff only has Payments access — just pull revenue — plus their own
       // assigned events, so they know what they're actually working on.
       const [payments, assigned] = await Promise.all([
-        getAllPayments(),
+        canTakePayments() ? getAllPayments() : Promise.resolve([]),
         getMyAssignedBookings()
       ])
       allPayments.value = payments
@@ -927,7 +928,9 @@ const staffAllowedSections = ['Dashboard', 'Event Planning', 'Payment Records', 
 
 const navItems = computed(() =>
   userRole.value === 'Staff'
-    ? allNavItems.filter(item => staffAllowedSections.includes(item.name))
+    ? allNavItems.filter(item =>
+        staffAllowedSections.includes(item.name) &&
+        (item.name !== 'Payment Records' || canTakePayments()))
     : allNavItems
 )
 
