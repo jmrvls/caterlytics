@@ -235,6 +235,16 @@
               </svg>
               Export CSV
             </button>
+            <button
+              type="button"
+              @click="openInvite"
+              class="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-none bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:opacity-90 transition"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Invite client
+            </button>
           </div>
         </div>
 
@@ -934,6 +944,64 @@
       </div>
     </div>
 
+    <!-- INVITE CLIENT MODAL: creates a business + emails its owner an invitation -->
+    <div v-if="inviteState" class="fixed inset-0 z-[55] flex items-end sm:items-center justify-center sm:p-4">
+      <div class="absolute inset-0 bg-black/50" @click="closeInvite"></div>
+      <form @submit.prevent="submitInvite" class="relative bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none w-full sm:max-w-md p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[90vh] overflow-y-auto">
+        <h3 class="font-bold text-gray-900 dark:text-gray-100">Invite a client</h3>
+        <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 mb-4">
+          Creates the catering business and emails the owner an invitation. They set their own password from the link and become the business admin.
+        </p>
+
+        <div class="space-y-3">
+          <div>
+            <label for="inv-business" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Business name</label>
+            <input id="inv-business" v-model="inviteState.business_name" @input="suggestUsername" required maxlength="100" type="text"
+              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="inv-name" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Owner's full name</label>
+            <input id="inv-name" v-model="inviteState.full_name" required maxlength="100" type="text"
+              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="inv-email" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Owner's email</label>
+            <input id="inv-email" v-model="inviteState.email" required type="email" autocomplete="off"
+              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="inv-username" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Username (used to sign in)</label>
+            <input id="inv-username" v-model="inviteState.username" @input="inviteState.usernameEdited = true" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}" type="text" autocomplete="off"
+              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="inv-phone" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Mobile (optional)</label>
+              <input id="inv-phone" v-model="inviteState.contact_number" type="tel" placeholder="09171234567"
+                class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <div>
+              <label for="inv-months" class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Paid months</label>
+              <select id="inv-months" v-model.number="inviteState.subscription_months"
+                class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                <option :value="0">No expiry set</option>
+                <option v-for="m in [1, 3, 6, 12]" :key="m" :value="m">{{ m }} month{{ m > 1 ? 's' : '' }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="inviteState.error" class="text-xs text-red-600 dark:text-red-400 mt-3">{{ inviteState.error }}</p>
+
+        <div class="flex justify-end gap-2 mt-5">
+          <button type="button" @click="closeInvite"
+            class="flex-1 sm:flex-none px-4 py-3 sm:py-2 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Cancel</button>
+          <button type="submit" :disabled="inviteState.saving"
+            class="flex-1 sm:flex-none px-4 py-3 sm:py-2 rounded-none text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition">{{ inviteState.saving ? 'Sending…' : 'Send invitation' }}</button>
+        </div>
+      </form>
+    </div>
+
     <!-- CONFIRM ACTION MODAL (themed replacement for window.confirm), with optional reason -->
     <div v-if="confirmState" class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4">
       <div class="absolute inset-0 bg-black/50"></div>
@@ -1006,7 +1074,7 @@ import {
   getPlatformStats, getPlatformBusinesses, setBusinessStatus, getBusinessStatusAudit,
   getBusinessStaffList, getBusinessPackagesList, getBusinessBookingsList,
   getTenantLifecycle, renewBusinessSubscription, setBusinessExpiry, getTenantAnalytics,
-  getLicenseQueue,
+  getLicenseQueue, inviteClientAdmin,
 } from '../services/superAdminService'
 
 const FILTERS = ['All', 'Pending', 'Active', 'Suspended', 'Rejected', 'Closed']
@@ -1996,10 +2064,50 @@ onMounted(() => {
   window.addEventListener('resize', closeMenu)
 })
 
+// ---------- Invite client ----------
+const inviteState = ref(null)
+function openInvite() {
+  closeMenu()
+  inviteState.value = {
+    business_name: '', full_name: '', email: '', username: '', usernameEdited: false,
+    contact_number: '', subscription_months: 1, saving: false, error: '',
+  }
+}
+function closeInvite() { if (!inviteState.value?.saving) inviteState.value = null }
+// Suggest a username from the business name until the Super Admin types their own.
+function suggestUsername() {
+  const st = inviteState.value
+  if (!st || st.usernameEdited) return
+  st.username = st.business_name.toLowerCase().replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 30)
+}
+async function submitInvite() {
+  const st = inviteState.value
+  if (!st || st.saving) return
+  st.saving = true
+  st.error = ''
+  try {
+    const res = await inviteClientAdmin({
+      business_name: st.business_name.trim(),
+      full_name: st.full_name.trim(),
+      email: st.email.trim(),
+      username: st.username.trim(),
+      contact_number: st.contact_number.trim() || null,
+      subscription_months: st.subscription_months,
+    })
+    inviteState.value = null
+    showToast(res?.message || 'Invitation sent.')
+    await loadData({ silent: true })
+  } catch (e) {
+    st.error = e?.message || 'Failed to send the invitation.'
+    st.saving = false
+  }
+}
+
 function onKeydown(e) {
   if (e.key !== 'Escape') return
   if (menu.value) closeMenu()
   else if (confirmState.value) resolveConfirm(false)
+  else if (inviteState.value) closeInvite()
   else if (renewState.value) closeRenew()
   else if (detailsBusiness.value) closeDetails()
 }

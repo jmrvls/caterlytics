@@ -13,7 +13,7 @@
       </p>
 
       <div v-if="!sessionReady && !checkingSession" class="text-red-600 text-sm font-medium mb-4">
-        This link is invalid or has expired. If you were invited as a staff member, ask your Admin/Owner to delete and re-add your account to send a new invitation. If you're resetting a password, request a new link below.
+        This link is invalid or has expired. If you were invited, ask whoever invited you (the Super Admin for a business owner, or your Admin/Owner for staff) to send a new invitation. If you're resetting a password, request a new link below.
       </div>
 
       <div v-if="errorMessage" class="text-red-600 text-sm font-medium mb-4">
@@ -22,6 +22,7 @@
 
       <div v-if="successMessage" class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium p-3 rounded-xl mb-4">
         {{ successMessage }}
+        <p v-if="invitedUsername" class="mt-1">Your username is <span class="font-bold">{{ invitedUsername }}</span>. Use it to sign in.</p>
       </div>
 
       <form v-if="sessionReady && !successMessage" @submit.prevent="handleSubmit" class="space-y-5">
@@ -80,12 +81,16 @@ const successMessage = ref('')
 
 const checkingSession = ref(true)
 const sessionReady = ref(false)
+// Set when the page was opened from an invitation email (shown after saving so
+// the new user knows what to type in the Username box when signing in).
+const invitedUsername = ref('')
 
 // Clicking the emailed link redirects here with a token that Supabase
 // exchanges for a temporary session automatically. We just confirm one exists.
 onMounted(async () => {
   const { data } = await supabase.auth.getSession()
   sessionReady.value = !!data.session
+  invitedUsername.value = data.session?.user?.user_metadata?.username || ''
   checkingSession.value = false
 })
 

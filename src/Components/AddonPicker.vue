@@ -86,6 +86,8 @@ import { ref, computed } from 'vue'
 // The database has no category column, so groups are derived from the data the
 // owner already types in: the name ("Baked Salmon Teriyaki - Full Tray (4-6 pax)")
 // and the description ("Food Tray · Seafood · Full tray, good for 4-6 pax").
+// Client-facing tabs: Seafood, Pork, Beef, Chicken, Pasta, Noodles, Bento Meals,
+// Sets, Special Orders (see categorize() below).
 const props = defineProps({
   addons: { type: Array, default: () => [] },
   quantities: { type: Object, default: () => ({}) },
@@ -101,15 +103,33 @@ const chosen = ref({}) // { [groupKey]: addon_id }
 const money = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const qty = (a) => Number(props.quantities[a.addon_id]) || 0
 
+// Tabs the client sees, in this order. Anything else is appended after these.
+const CATEGORY_ORDER = ['Seafood', 'Pork', 'Beef', 'Chicken', 'Pasta', 'Noodles', 'Bento Meals', 'Sets', 'Special Orders']
+
+// Pick the client-facing category. `kind` is the first description segment
+// ("Food Tray", "Party Tray", "Bento Meal", ...) and `tag` the food type ("Seafood").
+function categorize(kind, tag, name) {
+  if (/bento/i.test(kind)) return 'Bento Meals'
+  if (/\bset\b/i.test(kind)) return 'Sets'
+  if (/special\s*order/i.test(kind)) return 'Special Orders'
+  if (/(food|party)\s*tray/i.test(kind)) return tag || 'Other'
+  // Add-ons with a plain description (no "Kind · Type" format): guess from the name.
+  if (/station|salad bar|pica-pica/i.test(name)) return 'Food Stations'
+  if (/host|soundman/i.test(name)) return 'Host & Sounds'
+  if (/hour|venue|led wall|van service|table|corkage/i.test(name)) return 'Venue & Extras'
+  return 'Other'
+}
+
 function parseAddon(a) {
   const rawSegs = String(a.description || '').split('·').map((s) => s.trim()).filter(Boolean)
   const bestSeller = rawSegs.some((s) => /best\s*seller/i.test(s))
   const segs = rawSegs.filter((s) => !/best\s*seller/i.test(s))
   const hasCategory = rawSegs.length >= 2 && segs.length >= 1
-  const cat = hasCategory ? segs[0] : 'Other'
+  const kind = hasCategory ? segs[0] : ''
   const rest = hasCategory ? segs.slice(1) : segs
   const tag = rest.length >= 2 ? rest[0] : ''
   const note = rest.length ? rest[rest.length - 1] : ''
+  const cat = categorize(kind, tag, String(a.addon_name || ''))
 
   let base = String(a.addon_name || '').trim()
   let size = ''
@@ -117,16 +137,20 @@ function parseAddon(a) {
   if (m) { base = m[1].trim(); size = m[2] }
   else {
     m = base.match(/^(.*?)\s*\(\s*(\d+\s*[-–]\s*\d+\s*pax)\s*\)\s*$/i)
-    if (m) { base = m[1].trim(); size = m[2] }
+    if (m) { base = m[1].trim(); size = /party\s*tray/i.test(kind) ? `Party Tray (${m[2]})` : m[2] }
   }
   return { ...a, category: cat, tag, note, bestSeller, base, size }
 }
+
+// Same dish spelled slightly differently ("Meat Loaf"/"Meatloaf", "Seafood's"/"Seafood")
+// still lands in one card, so Half / Full / Party sizes show up as chips of one dish.
+const normalize = (s) => s.toLowerCase().replace(/['’]s\b/g, '').replace(/[^a-z0-9]/g, '')
 
 const groups = computed(() => {
   const map = new Map()
   for (const raw of props.addons) {
     const a = parseAddon(raw)
-    const key = `${a.category}|${a.base.toLowerCase()}`
+    const key = `${a.category}|${normalize(a.base)}`
     if (!map.has(key)) map.set(key, { key, base: a.base, category: a.category, tag: a.tag, bestSeller: false, variants: [] })
     const g = map.get(key)
     g.variants.push(a)
@@ -141,7 +165,11 @@ const groups = computed(() => {
 const categories = computed(() => {
   const counts = new Map()
   groups.value.forEach((g) => counts.set(g.category, (counts.get(g.category) || 0) + 1))
-  return [{ name: 'All', count: groups.value.length }, ...[...counts.entries()].map(([name, count]) => ({ name, count }))]
+  const rank = (n) => { const i = CATEGORY_ORDER.indexOf(n); return i === -1 ? (n === 'Other' ? 1001 : 1000) : i }
+  const ordered = [...counts.entries()]
+    .sort((x, y) => rank(x[0]) - rank(y[0]) || x[0].localeCompare(y[0]))
+    .map(([name, count]) => ({ name, count }))
+  return [{ name: 'All', count: groups.value.length }, ...ordered]
 })
 
 const filtered = computed(() => {

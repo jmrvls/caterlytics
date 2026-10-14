@@ -182,3 +182,41 @@ export async function getLicenseFileUrl(filePath, fileName, { download = false }
   if (error || !data?.signedUrl) throw new Error('Could not open the file. It may have been removed.');
   return data.signedUrl;
 }
+// ---------- Invite a client (business owner) ----------
+// Super Admin enters the client's email + business details; the
+// invite-business edge function creates the business and emails the owner
+// an invitation. The owner sets their OWN password from the emailed link
+// (/reset-password) and becomes that business's Owner/Manager.
+async function inviteErrorMessage(error, fallback) {
+  try {
+    const payload = await error.context.json();
+    if (payload?.error) return payload.error;
+  } catch { /* no readable body */ }
+  return fallback;
+}
+
+export async function inviteClientAdmin({ business_name, full_name, email, username, contact_number, subscription_months }) {
+  const { data, error } = await supabase.functions.invoke('invite-business', {
+    body: {
+      business_name,
+      owner_name: full_name,
+      email,
+      username: username || undefined,
+      contact_number: contact_number || undefined,
+      redirectTo: `${window.location.origin}/reset-password`,
+    },
+  });
+  if (error) throw new Error(await inviteErrorMessage(error, 'Failed to send the invitation.'));
+
+  // Paid months -> subscription expiry. The invitation is already sent at this
+  // point, so a failure here must not look like the whole invite failed.
+  let subscriptionNote = '';
+  if (subscription_months > 0 && data?.business_id) {
+    try {
+      await renewBusinessSubscription(data.business_id, subscription_months);
+    } catch {
+      subscriptionNote = ' (Subscription expiry not set - use Renew on the tenant.)';
+    }
+  }
+  return { ...data, message: `Invitation sent.${subscriptionNote}` };
+}

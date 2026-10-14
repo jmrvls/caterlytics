@@ -416,20 +416,27 @@
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 <tr v-if="isLoading">
-                  <td colspan="8" class="text-center py-10 text-gray-400 dark:text-gray-500">Loading inventory...</td>
+                  <td colspan="9" class="text-center py-10 text-gray-400 dark:text-gray-500">Loading inventory...</td>
                 </tr>
                 <tr v-else-if="filteredItems.length === 0">
-                  <td colspan="8" class="text-center py-10 text-gray-400 dark:text-gray-500">
+                  <td colspan="9" class="text-center py-10 text-gray-400 dark:text-gray-500">
                     {{ items.length === 0 ? 'No items yet. Click "New Item" to add one.' : 'No items match your filters.' }}
                   </td>
                 </tr>
-                <tr v-for="i in filteredItems" :key="i.item_id" class="hover:bg-gray-50/60 dark:hover:bg-gray-700/60">
+                <template v-for="i in filteredItems" :key="i.item_id">
+                <tr v-if="groupStarts[i.item_id]" class="bg-gray-100 dark:bg-gray-900">
+                  <td colspan="9" class="px-4 py-2 text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                    {{ groupStarts[i.item_id].label }} <span class="font-normal text-gray-400 dark:text-gray-500">({{ groupStarts[i.item_id].count }})</span>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50/60 dark:hover:bg-gray-700/60">
                   <td class="px-4 py-3.5 min-w-[12rem]">
                     <button type="button" @click="openAdjustModal(i)" class="font-medium text-left text-gray-800 dark:text-gray-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline" title="Stock in/out and history">{{ i.item_name }}</button>
-                    <div v-if="i.category || supplierName(i.supplier_id)" class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ [i.category, supplierName(i.supplier_id)].filter(Boolean).join(' · ') }}
+                    <div v-if="supplierName(i.supplier_id)" class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ supplierName(i.supplier_id) }}
                     </div>
                   </td>
+                  <td class="px-4 py-3.5 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ i.category || '—' }}</td>
                   <td class="px-4 py-3.5 text-right min-w-[8rem]">
                     <div class="font-semibold text-gray-800 dark:text-gray-100 tabular-nums">{{ formatQty(i.quantity, i.unit || 'kg') }}</div>
                     <div class="h-1.5 bg-gray-100 dark:bg-gray-700 mt-1 ml-auto w-24" role="presentation">
@@ -466,6 +473,7 @@
                     </div>
                   </td>
                 </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -825,6 +833,7 @@ const EXPIRY_TEXT = {
 
 const columns = [
   { key: 'item', label: 'Item', align: 'left', sortable: true },
+  { key: 'category', label: 'Category', align: 'left', sortable: true },
   { key: 'quantity', label: 'Quantity', align: 'right', sortable: true },
   { key: 'threshold', label: 'Alert at', align: 'right', sortable: false, cls: 'hidden xl:table-cell' },
   { key: 'cost', label: 'Unit cost', align: 'right', sortable: true },
@@ -835,6 +844,7 @@ const columns = [
 const sortOptions = [
   { value: 'status', label: 'Status (low first)' },
   { value: 'item', label: 'Name' },
+  { value: 'category', label: 'Category' },
   { value: 'quantity', label: 'Quantity' },
   { value: 'value', label: 'Stock value' },
   { value: 'expiry', label: 'Expiry' }
@@ -881,9 +891,31 @@ const filteredItems = computed(() => {
     if (sortDir.value === 'desc') dated.reverse()
     return [...dated, ...list.filter((i) => !i.expiry_date)]
   }
+  if (sortKey.value === 'category') {
+    // Grouped by category (A-Z, or Z-A when descending); items inside a group stay A-Z.
+    // Items with no category always go last.
+    const dir = sortDir.value === 'desc' ? -1 : 1
+    const byName = (a, b) => String(a.item_name).localeCompare(String(b.item_name))
+    const withCat = list.filter((i) => i.category).sort((a, b) => dir * a.category.localeCompare(b.category) || byName(a, b))
+    return [...withCat, ...list.filter((i) => !i.category).sort(byName)]
+  }
   list.sort(compareItems)
   if (sortDir.value === 'desc') list.reverse()
   return list
+})
+
+// When sorted by category: item_id -> header info for the first item of each group.
+const groupStarts = computed(() => {
+  const starts = {}
+  if (sortKey.value !== 'category') return starts
+  const counts = {}
+  for (const i of filteredItems.value) counts[i.category || ''] = (counts[i.category || ''] || 0) + 1
+  let last = null
+  for (const i of filteredItems.value) {
+    const cat = i.category || ''
+    if (cat !== last) { starts[i.item_id] = { label: cat || 'Uncategorized', count: counts[cat] }; last = cat }
+  }
+  return starts
 })
 
 const lowStockItems = computed(() => items.value.filter((i) => stockLevel(i) === 'low'))
