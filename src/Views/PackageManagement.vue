@@ -151,7 +151,7 @@
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Add-Ons
+              Menu List
             </button>
             <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -494,9 +494,9 @@
     <!-- ============ MANAGE ADD-ONS MODAL (ala carte extras) ============ -->
     <div v-if="showAddonsModal" @mousedown.self="closeAddonsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Add-Ons</h3>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Menu List</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
-          Extra items or services clients can attach to any booking on top of a package (e.g. Extra Lechon, Extra Waiter, Photobooth).
+          Extra menu items or services clients can attach to any booking on top of a package (e.g. Extra Lechon, Extra Waiter, Photobooth).
         </p>
 
         <div v-if="addonsError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -504,13 +504,13 @@
         </div>
 
         <div v-if="isLoadingAddons" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
-          Loading add-ons...
+          Loading menu list...
         </div>
 
         <div v-else class="space-y-2 mb-5">
           <input
             v-if="addons.length > 5"
-            v-model="addonSearch" type="search" placeholder="Search add-ons..."
+            v-model="addonSearch" type="search" placeholder="Search menu list..."
             class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
           />
           <!-- Category tabs -->
@@ -524,9 +524,9 @@
               class="flex-shrink-0 text-xs font-semibold px-3 py-1.5 border rounded-full transition"
             >{{ c.name }} <span class="opacity-70">({{ c.count }})</span></button>
           </div>
-          <p v-if="addons.length > 0 && visibleAddons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-3">No add-ons match your search.</p>
+          <p v-if="addons.length > 0 && visibleAddons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-3">No menu items match your search.</p>
           <div v-if="addons.length === 0" class="text-sm text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none p-4 text-center">
-            No add-ons yet. Add your first one below.
+            No menu items yet. Add your first one below.
           </div>
           <template v-for="(a, i) in visibleAddons" :key="a.addon_id">
           <button
@@ -575,11 +575,11 @@
 
         <!-- Add / Edit form -->
         <div ref="addonFormEl" class="border-t border-gray-100 dark:border-gray-700 pt-4">
-          <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">{{ editingAddonId ? 'Edit Add-On' : 'New Add-On' }}</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">{{ editingAddonId ? 'Edit Menu Item' : 'New Menu Item' }}</p>
           <div v-if="addonFormError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-3">{{ addonFormError }}</div>
           <form @submit.prevent="handleSaveAddon" class="space-y-3">
             <input
-              type="text" v-model="addonForm.addon_name" placeholder="Add-on name, e.g. Extra Lechon"
+              type="text" v-model="addonForm.addon_name" placeholder="Menu item name, e.g. Extra Lechon"
               class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" required
             />
             <div class="grid grid-cols-2 gap-3">
@@ -617,7 +617,7 @@
     <!-- ============ DELETE ADD-ON CONFIRM MODAL ============ -->
     <div v-if="addonToDelete" @mousedown.self="addonToDelete = null" class="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-sm p-6">
-        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete this add-on?</h3>
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Delete this menu item?</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
           <span class="font-semibold text-gray-700 dark:text-gray-200">{{ addonToDelete.addon_name }}</span> will no longer be offered to clients. Bookings that already included it keep their own saved copy.
         </p>
@@ -876,7 +876,7 @@ async function loadAddons() {
     if (!addons.value.some((a) => addonCategory(a) === addonCategoryFilter.value)) addonCategoryFilter.value = 'All'
     getAddonUsageCounts().then((c) => { addonUsage.value = c })
   } catch (err) {
-    addonsError.value = err.message || 'Failed to load add-ons.'
+    addonsError.value = err.message || 'Failed to load menu list.'
   } finally {
     isLoadingAddons.value = false
   }
@@ -919,7 +919,7 @@ async function handleSaveAddon() {
   const nameKey = String(addonForm.value.addon_name || '').trim().toLowerCase()
   const clash = addons.value.some((a) => a.addon_id !== editingAddonId.value && String(a.addon_name).trim().toLowerCase() === nameKey)
   if (clash) {
-    addonFormError.value = 'You already have an add-on with this name. Use a different name (e.g. add the size).'
+    addonFormError.value = 'You already have a menu item with this name. Use a different name (e.g. add the size).'
     return
   }
   isSavingAddon.value = true
@@ -932,7 +932,7 @@ async function handleSaveAddon() {
     cancelEditAddon()
     await loadAddons()
   } catch (err) {
-    addonFormError.value = err.message || 'Failed to save add-on.'
+    addonFormError.value = err.message || 'Failed to save menu item.'
   } finally {
     isSavingAddon.value = false
   }
@@ -943,7 +943,7 @@ async function toggleAddonActive(addon) {
     await updateAddon(addon.addon_id, { ...addon, is_active: !addon.is_active })
     await loadAddons()
   } catch (err) {
-    addonsError.value = err.message || 'Failed to update add-on.'
+    addonsError.value = err.message || 'Failed to update menu item.'
   }
 }
 
@@ -965,7 +965,7 @@ async function handleDeleteAddon() {
     addonToDelete.value = null
     await loadAddons()
   } catch (err) {
-    addonsError.value = err.message || 'Failed to delete add-on.'
+    addonsError.value = err.message || 'Failed to delete menu item.'
     addonToDelete.value = null
   } finally {
     isDeletingAddon.value = false

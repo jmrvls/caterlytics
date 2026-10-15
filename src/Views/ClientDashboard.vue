@@ -47,7 +47,21 @@
 
       <!-- TABS (hidden while a caterer is open in Book Catering) -->
       <div v-if="!(activeTab === 'Book Catering' && selectedBusinessId)" class="flex flex-wrap items-center justify-between gap-3 mb-4 sm:mb-6">
-        <div v-if="activeTab === 'Book Catering' && !selectedBusinessId && !bookingConfirmation && businesses.length" class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div class="flex gap-1 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-100 dark:border-gray-700 w-full sm:w-fit overflow-x-auto no-scrollbar">
+            <button
+              v-for="tab in tabs" :key="tab"
+              @click="activeTab = tab"
+              :class="activeTab === tab ? 'bg-emerald-600 dark:bg-emerald-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
+              class="relative flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-sm font-semibold transition"
+            >
+              {{ tab }}
+              <span
+                v-if="tab === 'Messages' && chatUnread"
+                class="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shadow"
+              >{{ chatUnread > 99 ? '99+' : chatUnread }}</span>
+            </button>
+        </div>
+        <div v-if="activeTab === 'Book Catering' && !selectedBusinessId && !bookingConfirmation && businesses.length" class="flex flex-wrap items-center gap-2 sm:gap-3 sm:ml-auto">
           <label for="biz-sort" class="text-xs font-semibold text-gray-500 dark:text-gray-400">Sort by</label>
           <select id="biz-sort" v-model="businessSort" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
             <option value="name">Name (A–Z)</option>
@@ -68,20 +82,6 @@
             <input id="biz-date" type="date" v-model="bizDate" :min="minEventDate" :max="maxEventDate" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />
             <button v-if="bizDate" type="button" @click="bizDate = ''" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">Clear</button>
           </div>
-        </div>
-        <div class="flex gap-1 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-100 dark:border-gray-700 w-full sm:w-fit sm:ml-auto overflow-x-auto no-scrollbar">
-            <button
-              v-for="tab in tabs" :key="tab"
-              @click="activeTab = tab"
-              :class="activeTab === tab ? 'bg-emerald-600 dark:bg-emerald-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'"
-              class="relative flex-1 sm:flex-none whitespace-nowrap px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-sm font-semibold transition"
-            >
-              {{ tab }}
-              <span
-                v-if="tab === 'Messages' && chatUnread"
-                class="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center shadow"
-              >{{ chatUnread > 99 ? '99+' : chatUnread }}</span>
-            </button>
         </div>
       </div>
 
@@ -844,6 +844,18 @@
 
       <!-- ============ MY BOOKINGS TAB ============ -->
       <div v-else-if="activeTab === 'My Bookings'">
+        <div class="flex items-start justify-between gap-3 mb-5">
+          <div class="min-w-0">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">My Bookings</h2>
+            <p v-if="!isLoading && myBookings.length" class="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+              {{ myBookings.length }} booking{{ myBookings.length === 1 ? '' : 's' }}
+            </p>
+          </div>
+          <button type="button" @click="activeTab = 'Book Catering'" class="inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" /></svg>
+            Book new event
+          </button>
+        </div>
         <div v-if="myRewards.length" class="flex flex-wrap gap-3 mb-4">
           <div v-for="r in myRewards" :key="r.business_id" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
             <div>
@@ -871,58 +883,78 @@
         </div>
 
         <!-- Next upcoming event -->
-        <div v-if="!isLoading && upcomingBooking" class="mb-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+        <div v-if="!isLoading && upcomingBooking" class="mb-5 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
           <div class="min-w-0">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-100">Your next event</p>
+            <p class="text-sm font-semibold text-emerald-100">Your next event</p>
             <p class="text-lg font-bold mt-0.5 truncate">{{ upcomingBooking.package_name || 'Custom Booking' }}</p>
-            <p class="text-sm text-emerald-50 mt-0.5">{{ formatDate(upcomingBooking.event_date) }} at {{ upcomingBooking.event_time }} · {{ upcomingBooking.guest_count }} guests</p>
-            <p v-if="upcomingBooking.tbl_payments && Number(upcomingBooking.tbl_payments.balance) > 0" class="text-xs text-emerald-100 mt-1">Balance: ₱{{ formatPrice(upcomingBooking.tbl_payments.balance) }}</p>
+            <p class="text-sm text-emerald-50 mt-0.5">{{ formatDay(upcomingBooking.event_date) }} · {{ formatTime(upcomingBooking.event_time) }} · {{ upcomingBooking.guest_count }} guests</p>
+            <p class="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1 text-[13px] font-medium">
+              <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              {{ nextActionText(upcomingBooking) }}
+            </p>
           </div>
-          <div class="flex items-center sm:flex-col sm:items-end gap-3 sm:gap-1.5 flex-shrink-0">
+          <div class="flex items-center justify-between sm:flex-col sm:items-end gap-3 sm:gap-2 flex-shrink-0">
             <p class="text-2xl sm:text-3xl font-extrabold leading-none">{{ daysUntilLabel(upcomingBooking.event_date) }}</p>
-            <span class="px-2.5 py-1 rounded-full bg-white/20 text-xs font-semibold">{{ upcomingBooking.booking_status }}</span>
+            <button type="button" @click="goToBooking(upcomingBooking)" class="min-h-[40px] px-4 rounded-xl bg-white text-emerald-700 hover:bg-emerald-50 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-700">
+              View details
+            </button>
           </div>
         </div>
 
-        <!-- Filter / search bar -- only worth showing once there's something to filter -->
-        <div v-if="!isLoading && myBookings.length > 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 mb-4 space-y-3">
-          <div class="flex flex-col sm:flex-row gap-3">
-            <div class="relative flex-1">
-              <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- View tabs + collapsible filters -->
+        <div v-if="!isLoading && myBookings.length > 0" class="mb-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-x-auto" role="tablist" aria-label="Booking groups">
+              <button
+                v-for="v in bookingViews"
+                :key="v"
+                type="button"
+                role="tab"
+                :aria-selected="bookingView === v"
+                @click="bookingView = v"
+                :class="bookingView === v
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'"
+                class="px-3.5 min-h-[36px] rounded-lg text-sm font-semibold whitespace-nowrap transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                {{ v }}
+                <span class="ml-1 text-[13px] font-medium text-gray-500 dark:text-gray-400">{{ bookingViewCounts[v] }}</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              @click="showBookingFilters = !showBookingFilters"
+              :aria-expanded="showBookingFilters"
+              class="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex-shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M6 12h12M10 20h4" /></svg>
+              Filters
+              <span v-if="hasActiveBookingFilters" class="w-2 h-2 rounded-full bg-emerald-500" aria-label="Filters applied"></span>
+            </button>
+          </div>
+
+          <div v-if="showBookingFilters" class="mt-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+            <div class="relative">
+              <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 type="text"
                 v-model="bookingSearchQuery"
-                placeholder="Search package or location..."
+                placeholder="Search package or venue"
+                aria-label="Search package or venue"
                 class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
               />
             </div>
-            <select
-              v-model="bookingStatusFilter"
-              class="px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
-            >
-              <option v-for="s in bookingStatusOptions" :key="s" :value="s">{{ s === 'All' ? 'All statuses' : s }}</option>
-            </select>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="flex items-center gap-2 flex-1 min-w-[9.5rem]">
-              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">From</label>
-              <input type="date" v-model="bookingDateFrom" class="p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="flex items-center gap-2 text-[13px] font-semibold text-gray-600 dark:text-gray-300">From
+                <input type="date" v-model="bookingDateFrom" class="p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-normal text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              </label>
+              <label class="flex items-center gap-2 text-[13px] font-semibold text-gray-600 dark:text-gray-300">To
+                <input type="date" v-model="bookingDateTo" class="p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-normal text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              </label>
+              <button v-if="hasActiveBookingFilters" type="button" @click="clearBookingFilters" class="text-[13px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">Clear filters</button>
             </div>
-            <div class="flex items-center gap-2 flex-1 min-w-[9.5rem]">
-              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">To</label>
-              <input type="date" v-model="bookingDateTo" class="p-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-            </div>
-            <button
-              v-if="hasActiveBookingFilters"
-              type="button"
-              @click="clearBookingFilters"
-              class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-            >
-              Clear filters
-            </button>
-            <span class="text-xs text-gray-400 dark:text-gray-500 ml-auto">{{ filteredMyBookings.length }} of {{ myBookings.length }} booking{{ myBookings.length === 1 ? '' : 's' }}</span>
           </div>
         </div>
 
@@ -940,127 +972,245 @@
           </div>
         </div>
         <div v-else-if="myBookings.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 text-center py-14">
-          <p class="text-gray-400 dark:text-gray-500 text-sm">You haven't made any bookings yet.</p>
-          <button @click="activeTab = 'Book Catering'" class="mt-3 text-emerald-600 dark:text-emerald-400 font-semibold text-sm hover:underline">
+          <p class="text-gray-600 dark:text-gray-400 text-sm">You haven't made any bookings yet.</p>
+          <button @click="activeTab = 'Book Catering'" class="mt-3 min-h-[40px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition">
             Book your first event
           </button>
         </div>
         <div v-else-if="filteredMyBookings.length === 0" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 text-center py-14">
-          <p class="text-gray-400 dark:text-gray-500 text-sm">No bookings match your filters.</p>
-          <button @click="clearBookingFilters" class="mt-3 text-emerald-600 dark:text-emerald-400 font-semibold text-sm hover:underline">
+          <p class="text-gray-600 dark:text-gray-400 text-sm">
+            {{ hasActiveBookingFilters ? 'No bookings match your filters.' : `No ${bookingView.toLowerCase()} bookings.` }}
+          </p>
+          <button v-if="hasActiveBookingFilters" @click="clearBookingFilters" class="mt-3 text-emerald-700 dark:text-emerald-400 font-semibold text-sm hover:underline">
             Clear filters
           </button>
+          <button v-else-if="bookingView === 'Upcoming'" @click="activeTab = 'Book Catering'" class="mt-3 min-h-[40px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition">
+            Book new event
+          </button>
         </div>
+
         <div v-else class="grid gap-4">
-          <div v-for="b in filteredMyBookings" :key="b.booking_id" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div class="min-w-0">
-              <p class="font-bold text-gray-800 dark:text-gray-100">{{ b.package_name || 'Custom Booking' }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 break-words">{{ formatDate(b.event_date) }} at {{ b.event_time }} — <span class="capitalize">{{ b.event_location }}</span></p>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ b.guest_count }} guests</p>
-              <div v-if="b.booking_status !== 'Cancelled'" class="mt-3 flex items-start max-w-sm" role="list" aria-label="Booking progress">
+          <article
+            v-for="b in filteredMyBookings"
+            :key="b.booking_id"
+            :id="`booking-${b.booking_id}`"
+            :class="[
+              b.booking_status === 'Cancelled'
+                ? 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700',
+              highlightedBookingId === b.booking_id ? 'ring-2 ring-emerald-500' : ''
+            ]"
+            class="rounded-2xl border p-4 sm:p-5 scroll-mt-24 transition"
+          >
+            <!-- Title + status -->
+            <div class="flex items-start justify-between gap-3">
+              <h3 class="font-bold text-base text-gray-900 dark:text-gray-100 min-w-0 break-words">{{ b.package_name || 'Custom Booking' }}</h3>
+              <span :class="statusBadgeClass(b.booking_status)" class="px-3 py-1 rounded-full text-[13px] font-semibold flex-shrink-0">
+                {{ b.booking_status }}
+              </span>
+            </div>
+
+            <!-- When / where / how many -->
+            <ul class="mt-2.5 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+              <li class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>
+                <span class="sr-only">Date:</span>{{ formatDay(b.event_date) }}
+              </li>
+              <li class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="sr-only">Time:</span>{{ formatTime(b.event_time) }}
+              </li>
+              <li class="flex items-center gap-1.5 min-w-0">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <span class="break-words">Venue: <span class="capitalize">{{ b.event_location || '—' }}</span></span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                {{ b.guest_count }} guests
+              </li>
+            </ul>
+
+            <!-- Progress (active bookings only) -->
+            <div v-if="b.booking_status !== 'Cancelled'" class="mt-4">
+              <div class="flex items-start max-w-md" role="list" aria-label="Booking progress">
                 <template v-for="(st, i) in trackerSteps(b)" :key="st.label">
-                  <div class="flex flex-col items-center w-14 sm:w-16 flex-shrink-0" role="listitem">
-                    <span :class="stepDotClass(st.state)" class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold">
-                      <svg v-if="st.state === 'done'" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                  <div class="flex flex-col items-center w-16 sm:w-20 flex-shrink-0" role="listitem">
+                    <span :class="stepDotClass(st.state)" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold">
+                      <svg v-if="st.state === 'done'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
                       <span v-else>{{ i + 1 }}</span>
                     </span>
-                    <span :class="stepLabelClass(st.state)" class="mt-1 text-[10px] sm:text-[11px] font-semibold text-center leading-tight">{{ st.label }}</span>
+                    <span :class="stepLabelClass(st.state)" class="mt-1 text-xs sm:text-[13px] font-semibold text-center leading-tight">{{ st.label }}</span>
                   </div>
-                  <div v-if="i < 3" :class="st.state === 'done' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-600'" class="h-0.5 flex-1 mt-3"></div>
+                  <div v-if="i < 3" :class="st.state === 'done' ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-600'" class="h-0.5 flex-1 mt-3.5"></div>
                 </template>
               </div>
-              <p v-else class="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">This booking was cancelled.</p>
-              <p v-if="b.addons?.length" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Add-ons: {{ b.addons.map(a => `${a.addon_name} ×${a.quantity}`).join(', ') }} (+₱{{ formatPrice(sumAddons(b.addons)) }})
-              </p>
+              <p class="mt-2.5 text-sm font-medium text-gray-800 dark:text-gray-100">{{ trackerCaption(b) }}</p>
+            </div>
 
-              <div v-if="b.menuPicks?.length" class="mt-2">
-                <button type="button" @click="toggleBookingMenu(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                  {{ expandedBookingMenus.has(b.booking_id) ? 'Hide menu' : `View menu (${b.menuPicks.length} dishes)` }}
-                </button>
-                <div v-if="expandedBookingMenus.has(b.booking_id)" class="mt-1.5 space-y-2">
-                  <div v-for="grp in groupMenuPicks(b.menuPicks)" :key="grp.category">
-                    <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ grp.category }}</p>
-                    <p v-for="p in grp.items" :key="p.item_id" class="text-xs text-gray-600 dark:text-gray-300">
-                      {{ p.item_name }}
-                      <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
-                    </p>
-                  </div>
+            <!-- Cancelled note -->
+            <div v-else class="mt-3 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+              <p>This booking was cancelled.</p>
+              <p v-if="b.tbl_payments && Number(b.tbl_payments.amount_paid) > 0" class="text-amber-700 dark:text-amber-300">
+                You paid ₱{{ formatPrice(b.tbl_payments.amount_paid) }} before cancelling. Refunds are handled directly with the caterer.
+              </p>
+            </div>
+
+            <!-- Money -->
+            <div v-if="b.booking_status !== 'Cancelled' && b.tbl_payments" class="mt-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-3">
+              <div class="grid grid-cols-3 gap-3 text-sm">
+                <div>
+                  <p class="text-[13px] text-gray-600 dark:text-gray-400">Total</p>
+                  <p class="font-bold text-gray-900 dark:text-gray-100">₱{{ formatPrice(b.tbl_payments.total_amount) }}</p>
+                </div>
+                <div>
+                  <p class="text-[13px] text-gray-600 dark:text-gray-400">Paid</p>
+                  <p class="font-bold text-gray-900 dark:text-gray-100">₱{{ formatPrice(b.tbl_payments.amount_paid) }}</p>
+                </div>
+                <div>
+                  <p class="text-[13px] text-gray-600 dark:text-gray-400">Balance</p>
+                  <p :class="Number(b.tbl_payments.balance) > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'" class="font-bold">₱{{ formatPrice(b.tbl_payments.balance) }}</p>
                 </div>
               </div>
-
-              <div v-if="b.quoted_total != null && (Number(b.seasonal_adjustment) !== 0 || Number(b.promo_discount) > 0 || Number(b.loyalty_discount) > 0)" class="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Quoted ₱{{ formatPrice(b.quoted_total) }}</span>
-                <span v-if="Number(b.seasonal_adjustment) !== 0"> · {{ b.seasonal_rule_name || 'Seasonal' }} {{ Number(b.seasonal_adjustment) > 0 ? '+' : '−' }}₱{{ formatPrice(Math.abs(b.seasonal_adjustment)) }}</span>
-                <span v-if="Number(b.promo_discount) > 0" class="text-emerald-600 dark:text-emerald-400"> · {{ b.promo_code }} −₱{{ formatPrice(b.promo_discount) }}</span>
-                <span v-if="Number(b.loyalty_discount) > 0" class="text-emerald-600 dark:text-emerald-400"> · {{ b.loyalty_points_used }} points −₱{{ formatPrice(b.loyalty_discount) }}</span>
+              <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span :class="paymentBadgeClass(b.tbl_payments.payment_status)" class="px-2.5 py-0.5 rounded-full text-[13px] font-semibold">{{ b.tbl_payments.payment_status }}</span>
+                <button type="button" @click="downloadReceipt(b)" class="text-[13px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">Download receipt</button>
               </div>
+            </div>
+            <p v-else-if="b.booking_status !== 'Cancelled' && b.quoted_total != null" class="mt-4 text-sm text-gray-700 dark:text-gray-300">
+              <span class="font-semibold text-gray-900 dark:text-gray-100">Quoted ₱{{ formatPrice(b.quoted_total) }}</span>
+              <span class="text-gray-600 dark:text-gray-400"> · the caterer will send the final amount after confirming.</span>
+            </p>
 
-              <div v-if="b.tbl_payments" class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span :class="paymentBadgeClass(b.tbl_payments.payment_status)" class="px-2.5 py-1 rounded-full text-xs font-semibold">
-                  {{ b.tbl_payments.payment_status }}
-                </span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                  Paid: ₱{{ formatPrice(b.tbl_payments.amount_paid) }} / ₱{{ formatPrice(b.tbl_payments.total_amount) }}
-                </span>
-                <span v-if="Number(b.tbl_payments.balance) > 0" class="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                  Balance: ₱{{ formatPrice(b.tbl_payments.balance) }}
-                </span>
-                <button @click="downloadReceipt(b)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                  Download Receipt
-                </button>
-              </div>
-              <div v-if="needsPayment(b)" class="mt-3">
-                <button type="button" @click="togglePayHelp(b.booking_id)" :aria-expanded="expandedPayHelp.has(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                  {{ expandedPayHelp.has(b.booking_id) ? 'Hide payment info' : 'How to pay' }}
-                </button>
-                <div v-if="expandedPayHelp.has(b.booking_id)" class="mt-2 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
-                  <p v-if="paymentInfo[bookingBusinessId(b)]" class="whitespace-pre-line font-medium text-gray-800 dark:text-gray-100">{{ paymentInfo[bookingBusinessId(b)] }}</p>
-                  <p v-else>This caterer hasn't posted payment details yet.
-                    <button type="button" @click="messageBusiness(bookingBusinessId(b))" class="font-semibold text-sky-600 dark:text-sky-400 hover:underline">Message them</button> to ask how to pay.</p>
-                  <p class="text-gray-500 dark:text-gray-400">After you pay, the caterer records it and your balance and receipt update here.</p>
+            <p v-if="b.booking_status !== 'Cancelled' && b.quoted_total != null && (Number(b.seasonal_adjustment) !== 0 || Number(b.promo_discount) > 0 || Number(b.loyalty_discount) > 0)" class="mt-2 text-[13px] text-gray-600 dark:text-gray-400">
+              <span v-if="b.tbl_payments" class="font-semibold text-gray-700 dark:text-gray-200">Quoted ₱{{ formatPrice(b.quoted_total) }}</span>
+              <span v-if="Number(b.seasonal_adjustment) !== 0"> · {{ b.seasonal_rule_name || 'Seasonal' }} {{ Number(b.seasonal_adjustment) > 0 ? '+' : '−' }}₱{{ formatPrice(Math.abs(b.seasonal_adjustment)) }}</span>
+              <span v-if="Number(b.promo_discount) > 0" class="text-emerald-700 dark:text-emerald-400"> · {{ b.promo_code }} −₱{{ formatPrice(b.promo_discount) }}</span>
+              <span v-if="Number(b.loyalty_discount) > 0" class="text-emerald-700 dark:text-emerald-400"> · {{ b.loyalty_points_used }} points −₱{{ formatPrice(b.loyalty_discount) }}</span>
+            </p>
+
+            <!-- Add-ons as chips -->
+            <div v-if="b.addons?.length" class="mt-3">
+              <p class="text-[13px] font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Add-ons</p>
+              <ul class="flex flex-wrap gap-2">
+                <li
+                  v-for="a in b.addons"
+                  :key="a.addon_id || a.addon_name"
+                  :class="b.booking_status === 'Cancelled' ? 'line-through text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-800' : 'text-gray-800 dark:text-gray-100 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40'"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-transparent text-[13px]"
+                >
+                  {{ a.addon_name }} <span class="text-gray-600 dark:text-gray-400">×{{ a.quantity }}</span>
+                  <span class="font-semibold">₱{{ formatPrice(a.subtotal) }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Menu accordion -->
+            <div v-if="b.menuPicks?.length" class="mt-3 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <button
+                type="button"
+                @click="toggleBookingMenu(b.booking_id)"
+                :aria-expanded="expandedBookingMenus.has(b.booking_id)"
+                class="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+              >
+                <span>Menu <span class="font-normal text-gray-600 dark:text-gray-400">({{ b.menuPicks.length }} dishes)</span></span>
+                <svg :class="expandedBookingMenus.has(b.booking_id) ? 'rotate-180' : ''" class="w-4 h-4 text-gray-500 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              <div v-if="expandedBookingMenus.has(b.booking_id)" class="px-3 pb-3 pt-1 space-y-2.5 border-t border-gray-100 dark:border-gray-700">
+                <div v-for="grp in groupMenuPicks(b.menuPicks)" :key="grp.category">
+                  <p class="text-[13px] font-semibold text-gray-500 dark:text-gray-400">{{ grp.category }}</p>
+                  <p v-for="p in grp.items" :key="p.item_id" class="text-sm text-gray-800 dark:text-gray-200">
+                    {{ p.item_name }}
+                    <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-xs font-semibold">{{ p.portion }}</span>
+                  </p>
                 </div>
               </div>
             </div>
-            <div class="flex flex-wrap items-center gap-2 sm:flex-shrink-0 pt-3 sm:pt-0 border-t border-gray-100 dark:border-gray-700 sm:border-0">
+
+            <!-- Payment instructions (offline payment: GCash / bank / cash, recorded by the caterer) -->
+            <div v-if="needsPayment(b) && expandedPayHelp.has(b.booking_id)" id="pay-help" class="mt-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/40 p-4 text-sm text-gray-700 dark:text-gray-200 space-y-2">
+              <p v-if="b.tbl_payments && Number(b.tbl_payments.balance) > 0" class="font-semibold text-gray-900 dark:text-gray-100">Amount to pay: ₱{{ formatPrice(b.tbl_payments.balance) }}</p>
+              <p v-if="paymentInfo[bookingBusinessId(b)]" class="whitespace-pre-line font-medium text-gray-900 dark:text-gray-100">{{ paymentInfo[bookingBusinessId(b)] }}</p>
+              <p v-else>
+                This caterer hasn't posted payment details yet.
+                <button type="button" @click="messageBusiness(bookingBusinessId(b))" class="font-semibold text-sky-700 dark:text-sky-400 hover:underline">Message them</button>
+                to ask how to pay.
+              </p>
+              <p class="text-gray-600 dark:text-gray-300">
+                Pay the caterer directly, then message them your proof of payment. They'll record it, and your balance and receipt will update here.
+              </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center gap-2 sm:justify-end">
+              <button
+                v-if="needsPayment(b)"
+                type="button"
+                @click="togglePayHelp(b.booking_id)"
+                :aria-expanded="expandedPayHelp.has(b.booking_id)"
+                aria-controls="pay-help"
+                :class="b.booking_status === 'Confirmed'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : 'border border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'"
+                class="w-full sm:w-auto min-h-[44px] px-4 rounded-xl text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+              >
+                {{ expandedPayHelp.has(b.booking_id) ? 'Hide payment instructions' : 'Payment instructions' }}
+              </button>
+
               <button
                 v-if="b.booking_status === 'Completed' && !reviewedBookingIds.has(String(b.booking_id))"
                 @click="reviewTarget = b"
-                class="min-h-[40px] px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition"
+                class="flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition"
               >
-                ★ Rate
+                ★ Rate this event
               </button>
-              <span v-else-if="reviewedBookingIds.has(String(b.booking_id))" class="text-xs text-gray-400 dark:text-gray-500">Reviewed ✓</span>
+              <span v-else-if="reviewedBookingIds.has(String(b.booking_id))" class="text-sm text-gray-600 dark:text-gray-400 px-2">Reviewed ✓</span>
+
+              <!-- Cancelled: Book again (+ Message only if money needs sorting out) -->
+              <template v-if="b.booking_status === 'Cancelled'">
+                <button
+                  v-if="bookingBusinessId(b) && b.tbl_payments && Number(b.tbl_payments.amount_paid) > 0"
+                  @click="messageBusiness(bookingBusinessId(b))"
+                  class="flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl border border-sky-600 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 text-sm font-semibold transition"
+                >
+                  Ask about refund
+                </button>
+                <button
+                  type="button"
+                  @click="bookAgain(b)"
+                  class="flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl border border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-sm font-semibold transition"
+                >
+                  Book again
+                </button>
+              </template>
+
               <button
-                v-if="bookingBusinessId(b)"
+                v-else-if="bookingBusinessId(b)"
                 @click="messageBusiness(bookingBusinessId(b))"
-                class="min-h-[40px] px-4 rounded-xl border border-sky-500 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 text-xs font-semibold transition"
+                class="flex-1 sm:flex-none min-h-[44px] px-4 rounded-xl border border-sky-600 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 text-sm font-semibold transition"
               >
-                Message
+                Message caterer
               </button>
-              <div v-if="['Pending', 'Confirmed'].includes(b.booking_status)" class="relative">
+
+              <div v-if="['Pending', 'Confirmed'].includes(b.booking_status)" class="relative flex-1 sm:flex-none">
                 <button
                   type="button"
                   @click="openActionMenuId = openActionMenuId === b.booking_id ? null : b.booking_id"
                   aria-haspopup="menu"
                   :aria-expanded="openActionMenuId === b.booking_id"
-                  aria-label="More actions"
-                  class="min-h-[40px] min-w-[40px] px-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-bold transition"
+                  class="w-full min-h-[44px] px-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                 >
-                  ⋯
+                  Manage
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
                 <div v-if="openActionMenuId === b.booking_id" @click="openActionMenuId = null" class="fixed inset-0 z-30"></div>
-                <div v-if="openActionMenuId === b.booking_id" role="menu" class="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden z-40">
-                  <button role="menuitem" @click="openActionMenuId = null; plannerTarget = b" class="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Plan Event</button>
-                  <button v-if="b.booking_status === 'Pending'" role="menuitem" @click="openActionMenuId = null; openEditModal(b)" class="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Edit booking</button>
-                  <button role="menuitem" @click="openActionMenuId = null; confirmCancel(b)" class="w-full text-left px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border-t border-gray-100 dark:border-gray-700">Cancel booking</button>
+                <div v-if="openActionMenuId === b.booking_id" role="menu" class="absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden z-40">
+                  <button role="menuitem" @click="openActionMenuId = null; plannerTarget = b" class="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Plan event</button>
+                  <button v-if="b.booking_status === 'Pending'" role="menuitem" @click="openActionMenuId = null; openEditModal(b)" class="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Edit / reschedule</button>
+                  <button role="menuitem" @click="openActionMenuId = null; confirmCancel(b)" class="w-full text-left px-4 py-3 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 border-t border-gray-100 dark:border-gray-700">Cancel booking</button>
                 </div>
               </div>
-              <span :class="statusBadgeClass(b.booking_status)" class="px-3 py-1.5 rounded-full text-xs font-semibold">
-                {{ b.booking_status }}
-              </span>
             </div>
-          </div>
+          </article>
         </div>
       </div>
 
@@ -2200,24 +2350,35 @@ const filteredBusinessesForBooking = computed(() => {
 
 // Search/filter for the My Bookings tab -- status, text search (package
 // name or event location), and an optional event-date range.
-const bookingStatusOptions = ['All', 'Pending', 'Confirmed', 'Completed', 'Cancelled']
-const bookingStatusFilter = ref('All')
+const bookingViews = ['Upcoming', 'Past', 'Cancelled']
+const bookingView = ref('Upcoming')
+const showBookingFilters = ref(false)
+const highlightedBookingId = ref(null)
 const bookingSearchQuery = ref('')
 const bookingDateFrom = ref('')
 const bookingDateTo = ref('')
+function bookingInView(b, view) {
+  if (view === 'Upcoming') return ['Pending', 'Confirmed'].includes(b.booking_status)
+  if (view === 'Past') return b.booking_status === 'Completed'
+  return b.booking_status === 'Cancelled'
+}
+const bookingViewCounts = computed(() => ({
+  Upcoming: myBookings.value.filter((b) => bookingInView(b, 'Upcoming')).length,
+  Past: myBookings.value.filter((b) => bookingInView(b, 'Past')).length,
+  Cancelled: myBookings.value.filter((b) => bookingInView(b, 'Cancelled')).length
+}))
 const hasActiveBookingFilters = computed(() =>
-  bookingStatusFilter.value !== 'All' || !!bookingSearchQuery.value || !!bookingDateFrom.value || !!bookingDateTo.value
+  !!bookingSearchQuery.value || !!bookingDateFrom.value || !!bookingDateTo.value
 )
 function clearBookingFilters() {
-  bookingStatusFilter.value = 'All'
   bookingSearchQuery.value = ''
   bookingDateFrom.value = ''
   bookingDateTo.value = ''
 }
 const filteredMyBookings = computed(() => {
   const q = bookingSearchQuery.value.trim().toLowerCase()
-  return myBookings.value.filter((b) => {
-    if (bookingStatusFilter.value !== 'All' && b.booking_status !== bookingStatusFilter.value) return false
+  const list = myBookings.value.filter((b) => {
+    if (!bookingInView(b, bookingView.value)) return false
     if (bookingDateFrom.value && b.event_date < bookingDateFrom.value) return false
     if (bookingDateTo.value && b.event_date > bookingDateTo.value) return false
     if (q) {
@@ -2226,6 +2387,11 @@ const filteredMyBookings = computed(() => {
     }
     return true
   })
+  // Upcoming: soonest first. Past / Cancelled: most recent first.
+  const dir = bookingView.value === 'Upcoming' ? 1 : -1
+  return list.sort((a, b) =>
+    dir * (`${a.event_date} ${a.event_time || ''}`).localeCompare(`${b.event_date} ${b.event_time || ''}`)
+  )
 })
 
 const selectedBusiness = computed(() => businesses.value.find((b) => b.business_id === selectedBusinessId.value))
@@ -2388,6 +2554,9 @@ async function loadMyBookings() {
   isLoading.value = true
   try {
     myBookings.value = await getMyBookings()
+    if (!myBookings.value.some((b) => bookingInView(b, 'Upcoming'))) {
+      bookingView.value = myBookings.value.some((b) => bookingInView(b, 'Past')) ? 'Past' : myBookings.value.some((b) => bookingInView(b, 'Cancelled')) ? 'Cancelled' : 'Upcoming'
+    }
     checkStatusChanges(myBookings.value)
     // Attach each booking's saved dishes + serving sizes for display.
     try {
@@ -2738,7 +2907,7 @@ watch(activeTab, (tab) => { if (tab !== 'Book Catering') bookingConfirmation.val
 const confirmationNextSteps = [
   { title: 'The caterer reviews your request', text: 'Your booking stays Pending until it is confirmed.' },
   { title: 'Watch the status', text: 'Follow it in My Bookings, or message the caterer anytime.' },
-  { title: 'Pay as instructed', text: 'Once confirmed, tap "How to pay" on your booking card.' }
+  { title: 'Pay as instructed', text: 'Once confirmed, tap "Payment instructions" on your booking card.' }
 ]
 
 // Same total the buy box shows (with service fee/tax when the platform has them).
@@ -2785,6 +2954,61 @@ const upcomingBooking = computed(() =>
     .sort((a, b) => daysUntil(a.event_date) - daysUntil(b.event_date))[0] || null
 )
 
+function formatDay(dateStr) {
+  if (!dateStr) return '—'
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr)
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(dateStr)
+  return d.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+}
+// '17:42:00' -> '5:42 PM'
+function formatTime(t) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''))
+  if (!m) return t || '—'
+  const h = Number(m[1])
+  return `${h % 12 || 12}:${m[2]} ${h >= 12 ? 'PM' : 'AM'}`
+}
+function balanceOf(b) {
+  return Number(b.tbl_payments?.balance) || 0
+}
+// One plain-language line saying what's happening / what the client should do next.
+function nextActionText(b) {
+  if (b.booking_status === 'Pending') return 'Waiting for the caterer to confirm'
+  if (b.booking_status === 'Confirmed') {
+    if (b.tbl_payments?.payment_status === 'Paid') return 'Paid in full. You\'re all set'
+    return balanceOf(b) > 0
+      ? `Confirmed. Balance of ₱${formatPrice(balanceOf(b))}, see payment instructions`
+      : 'Confirmed. See payment instructions'
+  }
+  if (b.booking_status === 'Completed') return 'Event completed'
+  return ''
+}
+function trackerCaption(b) {
+  if (b.booking_status === 'Pending') return 'Waiting for the caterer to confirm your booking.'
+  if (b.booking_status === 'Confirmed') {
+    if (b.tbl_payments?.payment_status === 'Paid') return 'Paid in full. Your event is all set.'
+    return balanceOf(b) > 0
+      ? `Confirmed. Please settle the ₱${formatPrice(balanceOf(b))} balance with the caterer.`
+      : 'Confirmed. Check the payment instructions to settle your payment.'
+  }
+  if (b.booking_status === 'Completed') return 'Event completed. Thanks for booking with us!'
+  return ''
+}
+function goToBooking(b) {
+  bookingView.value = bookingInView(b, 'Upcoming') ? 'Upcoming' : bookingInView(b, 'Past') ? 'Past' : 'Cancelled'
+  clearBookingFilters()
+  highlightedBookingId.value = b.booking_id
+  nextTick(() => {
+    document.getElementById(`booking-${b.booking_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setTimeout(() => { highlightedBookingId.value = null }, 2000)
+  })
+}
+function bookAgain(b) {
+  const id = bookingBusinessId(b)
+  activeTab.value = 'Book Catering'
+  if (id) selectBusiness(id)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 const TRACKER_LABELS = ['Submitted', 'Confirmed', 'Paid', 'Completed']
 function trackerSteps(b) {
   const status = b.booking_status
@@ -2796,28 +3020,28 @@ function trackerSteps(b) {
 function stepDotClass(state) {
   if (state === 'done') return 'bg-emerald-600 text-white'
   if (state === 'current') return 'bg-white dark:bg-gray-800 border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 ring-4 ring-emerald-100 dark:ring-emerald-900/40'
-  return 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+  return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
 }
 function stepLabelClass(state) {
-  return state === 'todo' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-100'
+  return state === 'todo' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100'
 }
 
 function statusBadgeClass(status) {
   switch (status) {
-    case 'Confirmed': return 'text-emerald-700 dark:text-emerald-300'
-    case 'Pending': return 'text-amber-700 dark:text-amber-300'
-    case 'Completed': return 'text-blue-700 dark:text-blue-300'
-    case 'Cancelled': return 'text-red-700 dark:text-red-300'
-    default: return 'text-gray-600 dark:text-gray-300'
+    case 'Confirmed': return 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    case 'Pending': return 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+    case 'Completed': return 'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+    case 'Cancelled': return 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    default: return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   }
 }
 
 function paymentBadgeClass(status) {
   switch (status) {
-    case 'Paid': return 'text-emerald-700 dark:text-emerald-300'
-    case 'Partial': return 'text-amber-700 dark:text-amber-300'
-    case 'Unpaid': return 'text-red-700 dark:text-red-300'
-    default: return 'text-gray-600 dark:text-gray-300'
+    case 'Paid': return 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    case 'Partial': return 'bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+    case 'Unpaid': return 'bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    default: return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
   }
 }
 

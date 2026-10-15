@@ -9,7 +9,7 @@
         <input
           v-model="search"
           type="search"
-          placeholder="Search add-ons (e.g. salmon, palabok)"
+          placeholder="Search menu list (e.g. salmon, palabok)"
           class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
           @keydown.enter.prevent
         />
@@ -27,7 +27,7 @@
     </div>
 
     <p v-if="!visibleGroups.length" class="text-sm text-gray-500 dark:text-gray-400 text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-700">
-      No add-ons match your search.
+      No menu items match your search.
     </p>
 
     <!-- Grouped cards -->
@@ -74,7 +74,7 @@
 
     <button v-if="hiddenCount > 0" type="button" @click="showAll = true"
       class="w-full text-sm font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-600/40 rounded-xl py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-      Show all {{ groups.length }} add-ons ({{ hiddenCount }} more)
+      Show all {{ groups.length }} menu items ({{ hiddenCount }} more)
     </button>
   </div>
 </template>
