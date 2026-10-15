@@ -165,6 +165,24 @@
           </div>
         </div>
 
+        <!-- Category filter chips -->
+        <div v-if="packageTypes.length > 1" class="flex flex-wrap items-center gap-2 mb-5">
+          <button
+            type="button"
+            @click="typeFilter = 'All'"
+            :class="typeFilter === 'All' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="px-3.5 py-1.5 rounded-full border text-sm font-semibold transition"
+          >All <span class="opacity-70 font-medium">{{ packages.length }}</span></button>
+          <button
+            v-for="t in packageTypes"
+            :key="t"
+            type="button"
+            @click="typeFilter = t"
+            :class="typeFilter === t ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
+            class="px-3.5 py-1.5 rounded-full border text-sm font-semibold transition"
+          >{{ t }} <span class="opacity-70 font-medium">{{ typeCounts[t] }}</span></button>
+        </div>
+
         <!-- Error Banner -->
         <div v-if="pageError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
           {{ pageError }}
@@ -181,9 +199,15 @@
         </div>
 
         <!-- Package Cards -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div v-else class="space-y-10">
+          <section v-for="group in groupedPackages" :key="group.type">
+          <div class="flex items-baseline gap-3 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">{{ group.type }}</h2>
+            <span class="text-sm font-semibold text-gray-400 dark:text-gray-500">{{ group.items.length }} package{{ group.items.length === 1 ? '' : 's' }}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start" style="align-items:flex-start">
           <div
-            v-for="pkg in filteredPackages"
+            v-for="pkg in group.items"
             :key="pkg.package_id"
             :class="tierAccent(pkg.package_name).border"
             class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 border-t-4 flex flex-col hover:border-emerald-200 dark:hover:border-emerald-700 transition"
@@ -217,7 +241,7 @@
               <div class="mt-4 flex-1">
                 <div
                   v-if="menuSections(pkg).length"
-                  :class="expandedIds.has(pkg.package_id) ? '' : 'max-h-44 overflow-hidden'"
+                  style="max-height:3.5rem;overflow:hidden"
                   class="space-y-2.5"
                 >
                   <div v-for="(sec, si) in menuSections(pkg)" :key="si">
@@ -236,9 +260,9 @@
                 <button
                   v-if="needsToggle(pkg)"
                   type="button"
-                  @click="toggleExpanded(pkg.package_id)"
+                  @click="fullMenuPkg = pkg"
                   class="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                >{{ expandedIds.has(pkg.package_id) ? 'Show less' : 'View full menu' }}</button>
+                >View full menu</button>
               </div>
 
               <!-- Cost (owner info) -->
@@ -256,6 +280,40 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
+              </div>
+            </div>
+          </div>
+          </div>
+          </section>
+        </div>
+
+        <!-- Full menu popup (cards keep a fixed height) -->
+        <div v-if="fullMenuPkg" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @mousedown.self="fullMenuPkg = null">
+          <div class="bg-white dark:bg-gray-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div class="flex items-start justify-between gap-4 p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
+              <div class="min-w-0">
+                <p v-if="fullMenuPkg.package_type" class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{{ fullMenuPkg.package_type }}</p>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">{{ fullMenuPkg.package_name }}</h3>
+                <p class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1">₱{{ formatPrice(fullMenuPkg.price_per_head) }} <span class="text-gray-400 dark:text-gray-500 font-medium">per head</span></p>
+              </div>
+              <button type="button" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-3xl leading-none" @click="fullMenuPkg = null" aria-label="Close">&times;</button>
+            </div>
+            <div class="p-6 space-y-5">
+              <div v-for="(sec, si) in menuSections(fullMenuPkg)" :key="si">
+                <p v-if="sec.title" class="text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-2">{{ sec.title }}</p>
+                <template v-for="(row, ri) in sec.rows" :key="ri">
+                  <template v-for="(line, li) in detailLines((row.label ? row.label + ': ' : '') + row.items)" :key="li">
+                    <div v-if="line.bullets" class="mt-3">
+                      <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1.5">{{ line.heading }}</p>
+                      <ul class="space-y-1">
+                        <li v-for="(b, bi) in line.bullets" :key="bi" class="flex gap-2 text-sm text-gray-600 dark:text-gray-300 leading-snug">
+                          <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span><span>{{ b }}</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <p v-else class="text-sm text-gray-600 dark:text-gray-300 leading-snug mt-1">{{ line.text }}</p>
+                  </template>
+                </template>
               </div>
             </div>
           </div>
@@ -476,7 +534,11 @@
           </div>
           <div>
             <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Package Type (optional)</label>
-            <input type="text" maxlength="40" v-model="form.package_type" placeholder="e.g. Catered, All-In, Wedding" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />
+            <input type="text" maxlength="40" v-model="form.package_type" list="package-type-options" placeholder="e.g. Catered, All-In, Wedding" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />
+            <datalist id="package-type-options">
+              <option v-for="t in typeSuggestions" :key="t" :value="t" />
+            </datalist>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to auto-pick from the package name. Packages are grouped by this on the list.</p>
           </div>
 
           <div class="flex gap-3 pt-2">
@@ -1078,19 +1140,121 @@ async function fetchPackages() {
   }
 }
 
+// ---------- Category grouping ----------
+const typeFilter = ref('All')
+const OTHER_TYPE = 'Other'
+const TYPE_ORDER = ['Catered', 'All-In', 'All-In + Theme', 'Full All-In', 'Cafe']
+
+const typeKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, '')
+
+// Same category even if typed "all in", "All-in", "ALL-IN" ...
+function typeOf(p) {
+  const raw = String(p.package_type || '').trim()
+  if (!raw) return OTHER_TYPE
+  const known = TYPE_ORDER.find((t) => typeKey(t) === typeKey(raw))
+  return known || raw.charAt(0).toUpperCase() + raw.slice(1)
+}
+
+// Guess the category from a package name (used when the admin leaves Type blank).
+function guessType(name) {
+  const n = String(name || '').toLowerCase()
+  if (/full\s*all[\s-]*in/.test(n)) return 'Full All-In'
+  if (/all[\s-]*in/.test(n)) return /theme/.test(n) && !/no\s*theme/.test(n) ? 'All-In + Theme' : 'All-In'
+  if (/caf[eé]/.test(n)) return 'Cafe'
+  if (/cater/.test(n)) return 'Catered'
+  return ''
+}
+
+function typeRank(type) {
+  const i = TYPE_ORDER.indexOf(type)
+  if (i !== -1) return i
+  return type === OTHER_TYPE ? 1000 : 100
+}
+
+// Menu A / B / C first, then by price.
+function menuRank(p) {
+  const m = String(p.package_name || '').match(/\b([A-C])\b/)
+  return m ? m[1].charCodeAt(0) : 999
+}
+
+const typeCounts = computed(() => {
+  const counts = {}
+  for (const p of packages.value) counts[typeOf(p)] = (counts[typeOf(p)] || 0) + 1
+  return counts
+})
+
+const packageTypes = computed(() =>
+  Object.keys(typeCounts.value).sort((a, b) => typeRank(a) - typeRank(b) || a.localeCompare(b))
+)
+
+const typeSuggestions = computed(() => {
+  const seen = new Set()
+  const out = []
+  for (const t of [...TYPE_ORDER, ...packageTypes.value]) {
+    if (t === OTHER_TYPE || seen.has(typeKey(t))) continue
+    seen.add(typeKey(t))
+    out.push(t)
+  }
+  return out
+})
+
 const filteredPackages = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  if (!q) return packages.value
-  return packages.value.filter(
-    (p) =>
+  return packages.value.filter((p) => {
+    if (typeFilter.value !== 'All' && typeOf(p) !== typeFilter.value) return false
+    if (!q) return true
+    return (
       p.package_name?.toLowerCase().includes(q) ||
       p.description?.toLowerCase().includes(q)
-  )
+    )
+  })
+})
+
+const groupedPackages = computed(() => {
+  const map = new Map()
+  for (const p of filteredPackages.value) {
+    const t = typeOf(p)
+    if (!map.has(t)) map.set(t, [])
+    map.get(t).push(p)
+  }
+  return [...map.entries()]
+    .sort((a, b) => typeRank(a[0]) - typeRank(b[0]) || a[0].localeCompare(b[0]))
+    .map(([type, items]) => ({
+      type,
+      items: items.sort(
+        (a, b) =>
+          menuRank(a) - menuRank(b) ||
+          Number(a.price_per_head) - Number(b.price_per_head) ||
+          a.package_id - b.package_id
+      )
+    }))
 })
 
 // ---------- Package card helpers ----------
 const expandedIds = ref(new Set())
 const lightboxUrl = ref('')
+const fullMenuPkg = ref(null)
+
+// Splits a package description into readable lines for the "View full menu" popup:
+// plain sentences, plus "Inclusions: a; b; c" / "Basic decoration (...): a, b, c" as bullet lists.
+function detailLines(text) {
+  const out = []
+  const sentences = String(text || '').split(/(?<=\.)\s+(?=[A-Z])/)
+  for (const raw of sentences) {
+    const s = raw.trim().replace(/\.$/, '')
+    if (!s) continue
+    const m = s.match(/^(Inclusions|Basic decoration[^:]*|Full package decoration[^:]*):\s*(.+)$/i)
+    if (m) {
+      const isInc = /^inclusions/i.test(m[1])
+      const parts = m[2].split(isInc ? /;\s*/ : /;\s*|,\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean)
+      const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1)
+      out.push({ heading: cap(m[1]), bullets: parts.map(cap) })
+    } else {
+      out.push({ text: s + '.' })
+    }
+  }
+  return out
+}
 
 function toggleExpanded(id) {
   const next = new Set(expandedIds.value)
@@ -1102,7 +1266,7 @@ function toggleExpanded(id) {
 // Show the "View full menu" toggle only when the text is actually long.
 function needsToggle(pkg) {
   const text = pkg.description || ''
-  return text.split('\n').length > 5 || text.length > 220
+  return text.split('\n').length > 2 || text.length > 100
 }
 
 // Turns the package's free-text description into categorized sections.
@@ -1195,6 +1359,9 @@ function closeFormModal() {
 async function handleSavePackage() {
   modalError.value = ''
   isSaving.value = true
+  if (!String(form.value.package_type || '').trim()) {
+    form.value.package_type = guessType(form.value.package_name)
+  }
   try {
     let savedPackage
     if (isEditing.value) {
