@@ -1,8 +1,9 @@
 <template>
   <div>
-    <div class="relative w-full aspect-[5/4] bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden">
+    <div class="group relative w-full aspect-[5/4] bg-gray-100 dark:bg-gray-900 rounded-lg overflow-hidden">
       <img v-if="current" :src="current" :alt="alt" class="w-full h-full object-contain cursor-zoom-in" @click="zoom = true" />
-      <button v-if="current" type="button" @click="zoom = true" class="absolute top-2 right-2 text-[11px] font-semibold bg-black/55 hover:bg-black/75 text-white px-2.5 py-1 rounded-full" aria-label="Zoom photo">⤢ Zoom</button>
+      <span v-if="current" class="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition text-xs font-semibold bg-black/70 text-white px-3 py-1.5 rounded-full whitespace-nowrap">🔍 Click to enlarge</span>
+      <button v-if="current" type="button" @click="zoom = true" class="absolute top-2 right-2 text-xs font-semibold bg-black/65 hover:bg-black/85 text-white px-3 py-1.5 rounded-full" aria-label="Zoom photo">⤢ Zoom</button>
       <div v-else class="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm">No image</div>
 
       <template v-if="images.length > 1">

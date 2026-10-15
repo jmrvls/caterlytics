@@ -31,14 +31,22 @@
     </p>
 
     <!-- Grouped cards -->
-    <div v-else class="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-700">
-      <div v-for="g in visibleGroups" :key="g.key" class="p-3 sm:p-4">
+    <div v-else class="space-y-2.5">
+      <div
+        v-for="g in visibleGroups"
+        :key="g.key"
+        class="p-3 sm:p-4 rounded-xl border-2 transition shadow-sm hover:shadow-md"
+        :class="groupQty(g) > 0
+          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/20'
+          : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-emerald-300 dark:hover:border-emerald-700'"
+      >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-1.5">
               <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ g.base }}</p>
               <span v-if="g.bestSeller" class="text-[10px] font-bold uppercase tracking-wide bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">★ Best seller</span>
               <span v-if="g.tag" class="text-[10px] font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full">{{ g.tag }}</span>
+              <span v-if="groupQty(g) > 0" class="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full">✓ Added ({{ groupQty(g) }})</span>
             </div>
             <p v-if="active(g).note" class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ active(g).note }}</p>
           </div>
@@ -46,10 +54,10 @@
           <!-- Stepper for the currently selected size -->
           <div class="flex items-center gap-2 flex-shrink-0">
             <button type="button" @click="change(active(g), -1)" :disabled="!qty(active(g))" aria-label="Decrease quantity"
-              class="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 flex items-center justify-center text-lg font-bold">−</button>
-            <span class="w-7 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{{ qty(active(g)) }}</span>
+              class="w-11 h-11 rounded-lg border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:border-gray-300 dark:disabled:border-gray-600 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center text-xl font-bold">−</button>
+            <span class="w-8 text-center text-base font-bold text-gray-900 dark:text-gray-100">{{ qty(active(g)) }}</span>
             <button type="button" @click="change(active(g), 1)" aria-label="Increase quantity"
-              class="w-10 h-10 rounded-lg border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center text-lg font-bold">+</button>
+              class="w-11 h-11 rounded-lg border-2 border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 flex items-center justify-center text-xl font-bold">+</button>
           </div>
         </div>
 
@@ -102,6 +110,8 @@ const chosen = ref({}) // { [groupKey]: addon_id }
 
 const money = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const qty = (a) => Number(props.quantities[a.addon_id]) || 0
+// total quantity picked across all sizes of one dish (drives the green "selected" card)
+const groupQty = (g) => g.variants.reduce((n, v) => n + qty(v), 0)
 
 // Tabs the client sees, in this order. Anything else is appended after these.
 const CATEGORY_ORDER = ['Seafood', 'Pork', 'Beef', 'Chicken', 'Pasta', 'Noodles', 'Bento Meals', 'Sets', 'Special Orders']

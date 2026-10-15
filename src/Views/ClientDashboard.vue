@@ -565,35 +565,50 @@
 
             <!-- RIGHT: buy box -- package price, then all booking details -->
             <div class="space-y-5">
+              <!-- Package title + badges -->
               <div>
-                <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 leading-snug">{{ selectedPackage?.package_name }}</p>
-                <div class="flex flex-wrap items-center gap-2 mt-1.5">
-                  <span v-if="selectedPackage?.package_type" class="text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">{{ selectedPackage.package_type }}</span>
-                  <span v-if="selectedPackage && guestRangeLabel(selectedPackage)" class="text-[11px] text-gray-500 dark:text-gray-400">Good for {{ guestRangeLabel(selectedPackage) }}</span>
+                <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 leading-snug">{{ selectedPackage?.package_name }}</p>
+                <div class="flex flex-wrap items-center gap-2 mt-2">
+                  <span v-if="selectedPackage?.package_type" class="text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full">{{ selectedPackage.package_type }}</span>
                   <StarRating :model-value="pkgStats(selectedPackage).avg_rating || 0" />
                   <span class="text-xs text-gray-500 dark:text-gray-400">{{ pkgStats(selectedPackage).review_count ? `${pkgStats(selectedPackage).avg_rating?.toFixed(1)} (${pkgStats(selectedPackage).review_count} reviews)` : 'No reviews yet' }}</span>
                   <HeartButton small :active="favoritePackageIds.has(selectedPackage?.package_id)" @toggle="toggleFavoritePackage(selectedPackage.package_id)" />
                 </div>
-                <div v-if="selectedPackage" class="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
+              </div>
+
+              <!-- Price + guests + total: stays pinned (desktop) while the client scrolls through the add-ons -->
+              <div v-if="selectedPackage" class="lg:sticky lg:top-[calc(var(--app-hdr,4.5rem)_+_var(--app-back,4rem))] z-[8] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-4">
+                <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                   <div>
                     <div class="flex items-baseline gap-1.5">
-                      <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">₱{{ formatPrice(selectedPackage.price_per_head) }}</span>
+                      <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">₱{{ formatPrice(selectedPackage.price_per_head) }}</span>
                       <span class="text-xs font-medium text-gray-400 dark:text-gray-500">/ head</span>
                     </div>
+                    <span v-if="guestRangeLabel(selectedPackage)" class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold bg-sky-50 dark:bg-sky-900/30 text-sky-800 dark:text-sky-200 border border-sky-100 dark:border-sky-800 px-2 py-0.5 rounded-full">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      Good for {{ guestRangeLabel(selectedPackage) }}
+                    </span>
                   </div>
-                  <div v-if="guestsNum > 0">
-                    <div class="flex items-baseline gap-1.5">
-                      <span class="text-lg font-bold text-gray-800 dark:text-gray-100">₱{{ formatPrice((selectedPackage.price_per_head || 0) * guestsNum) }}</span>
-                      <span class="text-xs font-medium text-gray-400 dark:text-gray-500">total for {{ guestsNum }} guest{{ guestsNum === 1 ? '' : 's' }}</span>
-                    </div>
+                  <div class="w-full sm:w-44">
+                    <label class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Number of Guests</label>
+                    <input type="number" v-model.number="form.guest_count" required min="1" :max="platform.max_guests" step="1" placeholder="e.g. 50" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />
                   </div>
-                  <p v-else class="text-xs text-gray-500 dark:text-gray-400">Enter your number of guests to see the total.</p>
+                  <div v-if="guestsNum > 0" class="text-right">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Est. total</p>
+                    <p class="text-2xl font-extrabold text-gray-900 dark:text-gray-100">{{ bookingTotalLabel }}</p>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                      ₱{{ formatPrice((selectedPackage.price_per_head || 0) * guestsNum) }} × {{ guestsNum }} guest{{ guestsNum === 1 ? '' : 's' }}<template v-if="addonsSubtotal > 0"> + ₱{{ formatPrice(addonsSubtotal) }} add-ons</template>
+                    </p>
+                  </div>
                 </div>
-                <div class="mt-3 max-w-[220px]">
-                  <label class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Number of Guests</label>
-                  <input type="number" v-model.number="form.guest_count" required min="1" :max="platform.max_guests" step="1" placeholder="e.g. 50" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" />
+
+                <!-- Empty state: easy to notice -->
+                <div v-if="!(guestsNum > 0)" class="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2 text-xs font-medium">
+                  <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Enter your number of guests to see the total.
                 </div>
-                <p v-if="selectedPackage && !fitsGuests(selectedPackage)" class="mt-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+
+                <p v-if="!fitsGuests(selectedPackage)" class="mt-3 text-xs font-medium text-amber-700 dark:text-amber-300">
                   Heads up: this package is meant for {{ guestRangeLabel(selectedPackage) }}, but you entered {{ guestsNum }}.
                 </p>
               </div>
@@ -826,11 +841,34 @@
           <!-- Always-visible total + submit (mobile and desktop) -->
           <div class="h-24" aria-hidden="true"></div>
           <div class="fixed bottom-0 inset-x-0 z-20 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
-            <div class="flex items-center gap-3 max-w-xl lg:max-w-4xl mx-auto">
+            <div class="relative flex items-center gap-3 max-w-xl lg:max-w-4xl mx-auto">
+              <!-- Selected add-ons list (opens from the "N add-ons" link below) -->
+              <div v-if="showAddonSummary && selectedAddonLines.length" class="absolute bottom-full left-0 right-0 mb-5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 max-h-64 overflow-y-auto">
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">Your add-ons</p>
+                  <button type="button" @click="showAddonSummary = false" class="text-xs font-semibold text-gray-500 hover:text-emerald-600" aria-label="Close add-ons list">Close ✕</button>
+                </div>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+                  <li v-for="l in selectedAddonLines" :key="l.addon_id" class="flex items-center justify-between gap-3 py-2">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ l.name }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ l.qty }} × ₱{{ formatPrice(l.price) }}</p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                      <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">₱{{ formatPrice(l.qty * l.price) }}</span>
+                      <button type="button" @click="setAddonQuantity(l.addon_id, 0)" class="text-xs font-semibold text-red-500 hover:text-red-600">Remove</button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
               <div class="min-w-0 flex-1">
                 <p class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Est. Total</p>
                 <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-tight truncate">{{ guestsNum > 0 ? bookingTotalLabel : 'Enter guests' }}</p>
                 <p v-if="guestsNum > 0" class="text-[11px] text-gray-500 dark:text-gray-400">{{ guestsNum }} guest{{ guestsNum === 1 ? '' : 's' }}<template v-if="addonsSubtotal > 0"> · incl. ₱{{ formatPrice(addonsSubtotal) }} add-ons</template></p>
+                <button v-if="selectedAddonCount > 0" type="button" @click="showAddonSummary = !showAddonSummary" class="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 hover:underline">
+                  {{ selectedAddonCount }} add-on{{ selectedAddonCount === 1 ? '' : 's' }} selected
+                  <svg class="w-3 h-3 transition-transform" :class="showAddonSummary ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+                </button>
               </div>
               <button type="submit" :disabled="isSubmitting || !!conflictWarning" class="flex-shrink-0 bg-emerald-600 text-white px-5 min-h-[44px] rounded-xl font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50">
                 {{ isSubmitting ? 'Submitting...' : 'Book Now' }}
@@ -1762,6 +1800,15 @@ function setAddonQuantity(addonId, qty) {
   const n = Math.max(0, Math.floor(Number(qty) || 0))
   addonQuantities.value = { ...addonQuantities.value, [addonId]: n }
 }
+
+// Summary of what the client picked (shown from the Book Now bar)
+const showAddonSummary = ref(false)
+const selectedAddonLines = computed(() =>
+  businessAddons.value
+    .map((a) => ({ addon_id: a.addon_id, name: a.addon_name, price: Number(a.price) || 0, qty: Number(addonQuantities.value[a.addon_id]) || 0 }))
+    .filter((l) => l.qty > 0)
+)
+const selectedAddonCount = computed(() => selectedAddonLines.value.reduce((n, l) => n + l.qty, 0))
 
 async function loadBusinessAddons(businessId) {
   addonQuantities.value = {}
