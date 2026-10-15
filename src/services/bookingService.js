@@ -156,12 +156,7 @@ export async function createBooking(bookingData) {
 
   const conflict = await checkDateConflict(bookingData.event_date, bookingData.business_id || null);
   if (conflict.conflict) {
-    const existing = conflict.existingBookings[0];
-    throw new Error(
-      existing
-        ? `${bookingData.event_date} is fully booked (${conflict.taken ?? 1} of ${conflict.capacity ?? 1} events taken, latest: ${existing.client_name}). Please choose another date.`
-        : `${bookingData.event_date} is already booked with this caterer. Please choose another date.`
-    );
+    throw new Error(dateFullMessage(bookingData.event_date, conflict));
   }
 
   const { data, error } = await supabase
@@ -188,7 +183,7 @@ export async function createBooking(bookingData) {
     // unique index (tbl_bookings_no_double_booking) is the final backstop.
     if (error.code === '23505') {
       throw new Error(
-        `Someone else just booked ${bookingData.event_date} while you were submitting. Please choose another date.`
+        `${bookingData.event_date} just became fully booked while you were submitting. Please choose another date.`
       );
     }
     throw error;
@@ -260,7 +255,7 @@ export async function updateBookingStatus(id, status) {
   if (error) {
     if (error.code === '23505') {
       throw new Error(
-        'Another booking already exists on the same date. This one can\'t be set to Pending/Confirmed.'
+        'This date is already fully booked, so this booking can\'t be set back to Pending/Confirmed. Increase "Events Per Day" in Settings or pick another date.'
       );
     }
     throw error;
@@ -382,9 +377,7 @@ export async function updateMyBooking(id, updates) {
   if (updates.event_date && updates.event_date !== currentBooking.event_date && updates.business_id) {
     const conflict = await checkDateConflict(updates.event_date, updates.business_id, id);
     if (conflict.conflict) {
-      throw new Error(
-        `${updates.event_date} is already booked with this caterer. Please choose another date.`
-      );
+      throw new Error(dateFullMessage(updates.event_date, conflict));
     }
   }
 
@@ -404,7 +397,7 @@ export async function updateMyBooking(id, updates) {
 
   if (error) {
     if (error.code === '23505') {
-      throw new Error('Someone else just booked that date. Please choose another date.');
+      throw new Error('That date just became fully booked. Please choose another date.');
     }
     throw error;
   }
@@ -588,12 +581,92 @@ export async function getTakenDates(businessId, startDate, endDate) {
   return (data || []).map((row) => (typeof row === 'string' ? row : row.get_taken_dates));
 }
 
+// One clear sentence for "this date is full", with the numbers when we have them.
+export function dateFullMessage(dateStr, conflict = {}) {
+  const { taken, capacity } = conflict;
+  if (capacity > 1 && taken !== undefined && taken !== null) {
+    return `${dateStr} is fully booked (${taken} of ${capacity} events taken). Please choose another date.`;
+  }
+  return `${dateStr} is fully booked. Please choose another date.`;
+}
+
+// How many Pending/Confirmed events a business has on one date, and its daily
+// limit. Needs get_date_usage() from supabase_migration_events_per_day.sql;
+// if that isn't installed yet we fall back to the yes/no is_date_taken().
+async function getDateUsage(businessId, eventDate, excludeBookingId = null) {
+  const { data, error } = await supabase.rpc('get_date_usage', {
+    p_business_id: businessId,
+    p_event_date: eventDate,
+    p_exclude_booking_id: excludeBookingId,
+  });
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) return { taken: Number(row.taken) || 0, capacity: Number(row.capacity) || 1 };
+  }
+  const { data: full, error: fullError } = await supabase.rpc('is_date_taken', {
+    p_business_id: businessId,
+    p_event_date: eventDate,
+    p_exclude_booking_id: excludeBookingId,
+  });
+  if (fullError) throw fullError;
+  return null; // only a yes/no is known
+}
+
+// Per-date usage for a month: { 'YYYY-MM-DD': { taken, capacity } } for dates
+// that have at least one booking. Falls back to full dates only.
+export async function getMonthUsage(businessId, startDate, endDate) {
+  const { data, error } = await supabase.rpc('get_month_usage', {
+    p_business_id: businessId,
+    p_start_date: startDate,
+    p_end_date: endDate,
+  });
+  if (!error) {
+    const map = {};
+    for (const r of data || []) {
+      map[r.event_date] = { taken: Number(r.taken) || 0, capacity: Number(r.capacity) || 1 };
+    }
+    return map;
+  }
+  const full = await getTakenDates(businessId, startDate, endDate);
+  const map = {};
+  for (const d of full) map[d] = { taken: null, capacity: null, full: true };
+  return map;
+}
+
+// Upcoming dates where the number of Pending/Confirmed bookings is above a
+// proposed daily limit (used to warn the owner before lowering Events Per Day).
+// Existing bookings are never removed; they just count against the limit.
+export async function getDatesOverCapacity(newCapacity) {
+  const { data, error } = await supabase
+    .from('tbl_bookings')
+    .select('event_date')
+    .gte('event_date', localToday())
+    .in('booking_status', ['Pending', 'Confirmed'])
+    .limit(5000);
+  if (error) throw error;
+  const counts = {};
+  for (const r of data || []) counts[r.event_date] = (counts[r.event_date] || 0) + 1;
+  return Object.entries(counts)
+    .filter(([, n]) => n > newCapacity)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, c) => a.date.localeCompare(c.date));
+}
+
 // Client-side conflict check before submit
 export async function checkDateConflict(eventDate, businessId = null, excludeBookingId = null) {
   // Clients can only read their OWN bookings (RLS), so they ask the database
-  // a yes/no question for a specific business instead. It never returns
-  // anyone else's booking details.
+  // about a specific business instead. It never returns anyone else's booking
+  // details, only counts.
   if (businessId) {
+    const usage = await getDateUsage(businessId, eventDate, excludeBookingId);
+    if (usage) {
+      return {
+        conflict: usage.taken >= usage.capacity,
+        existingBookings: [],
+        taken: usage.taken,
+        capacity: usage.capacity,
+      };
+    }
     const { data, error } = await supabase.rpc('is_date_taken', {
       p_business_id: businessId,
       p_event_date: eventDate,
@@ -614,14 +687,10 @@ export async function checkDateConflict(eventDate, businessId = null, excludeBoo
   // Staff/admin path: the date is only "taken" once the business's daily
   // capacity (tbl_business.max_bookings_per_day, default 1) is used up. This
   // mirrors the database trigger enforce_booking_capacity, which stays the
-  // real enforcement. If the capacity can't be read we fall back to 1.
-  let capacity = 1;
-  try {
-    const business = await getMyBusiness();
-    capacity = Number(business?.max_bookings_per_day) || 1;
-  } catch {
-    capacity = 1;
-  }
+  // real enforcement. If the capacity can't be read we throw instead of
+  // guessing 1 (a wrong guess falsely blocks dates the database would allow).
+  const business = await getMyBusiness();
+  const capacity = Number(business?.max_bookings_per_day) || 1;
 
   return {
     conflict: existing.length >= capacity,

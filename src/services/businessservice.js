@@ -39,7 +39,7 @@ export async function getMyBusiness() {
 // segment just needs to match auth.uid(), which is true here since only the
 // business owner (tbl_business.owner_id === auth.uid()) can call this.
 export async function uploadBusinessLogo(ownerId, businessId, file) {
-  const ext = file.name.split('.').pop();
+  const ext = { 'image/png': 'png', 'image/webp': 'webp' }[file.type] || 'jpg';
   const filePath = `${ownerId}/business-logo-${businessId}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
@@ -68,7 +68,7 @@ export async function uploadBusinessLogo(ownerId, businessId, file) {
 // Uploads the store cover photo (the banner shown on the caterer cards) and
 // saves it to tbl_business.cover_url. Same bucket/RLS as the logo.
 export async function uploadBusinessCover(ownerId, businessId, file) {
-  const ext = file.name.split('.').pop();
+  const ext = { 'image/png': 'png', 'image/webp': 'webp' }[file.type] || 'jpg';
   const filePath = `${ownerId}/business-cover-${businessId}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
@@ -111,7 +111,7 @@ export async function removeBusinessCover(businessId) {
 // surface here as a clear error instead of a confusing "success".
 // max_bookings_per_day = how many events this caterer can handle on the same
 // date (the database trigger enforce_booking_capacity uses it as the limit).
-export const MAX_BOOKINGS_PER_DAY_LIMIT = 20; // matches the DB CHECK on tbl_business
+export const MAX_BOOKINGS_PER_DAY_LIMIT = 100; // matches the DB CHECK on tbl_business (see supabase_migration_events_per_day.sql)
 
 export async function updateMyBusiness(businessId, { business_name, contact_email, contact_number, address, max_bookings_per_day }) {
   // This number receives the "new booking" SMS, so it must be a PH mobile number
@@ -120,7 +120,14 @@ export async function updateMyBusiness(businessId, { business_name, contact_emai
   if (rawNumber && !isValidPhMobile(rawNumber)) {
     throw new Error('Enter a valid mobile number, e.g. 09XXXXXXXXX. Booking text alerts are sent to this number.');
   }
-  const updates = { business_name, contact_email, contact_number: rawNumber ? normalizePhMobile(rawNumber) : rawNumber, address };
+  const name = String(business_name ?? '').trim();
+  if (!name) throw new Error('Business name is required.');
+  const updates = {
+    business_name: name,
+    contact_email: String(contact_email ?? '').trim(),
+    contact_number: rawNumber ? normalizePhMobile(rawNumber) : rawNumber,
+    address: String(address ?? '').trim(),
+  };
   if (max_bookings_per_day !== undefined && max_bookings_per_day !== null && max_bookings_per_day !== '') {
     const cap = Number(max_bookings_per_day);
     if (!Number.isInteger(cap) || cap < 1 || cap > MAX_BOOKINGS_PER_DAY_LIMIT) {

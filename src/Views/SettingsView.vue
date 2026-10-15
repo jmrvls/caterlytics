@@ -15,10 +15,7 @@
 
     <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
-      <div v-if="successMessage" class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-medium p-3 rounded-xl">
-        {{ successMessage }}
-      </div>
-      <div v-if="pageError" class="text-red-600 dark:text-red-300 text-sm font-medium">
+      <div v-if="pageError && isLoadError" class="text-red-600 dark:text-red-300 text-sm font-medium">
         {{ pageError }}
       </div>
 
@@ -30,6 +27,9 @@
           <h3 class="font-bold text-gray-800 dark:text-gray-100">Account Information</h3>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Manage and protect your account</p>
           <hr class="border-gray-100 dark:border-gray-700 my-5" />
+
+          <div v-if="successMessage" class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-medium p-3 rounded-xl mb-4">{{ successMessage }}</div>
+          <div v-if="pageError && !isLoadError" class="text-red-600 dark:text-red-300 text-sm font-medium mb-4">{{ pageError }}</div>
 
           <div class="flex flex-col-reverse md:flex-row gap-8">
             <!-- LEFT: form rows -->
@@ -148,9 +148,14 @@
             <div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
               <label class="w-40 shrink-0 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 sm:pt-3">Events Per Day</label>
               <div class="flex-1">
-                <input v-model.number="businessForm.max_bookings_per_day" :disabled="!isBusinessOwner" type="number" min="1" max="20" step="1" required
+                <input v-model.number="businessForm.max_bookings_per_day" :disabled="!isBusinessOwner" type="number" min="1" max="100" step="1" required
                   class="w-full sm:w-32 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:text-gray-400" />
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">How many events your team can handle on the same date (same time included). A date only shows as fully booked once this many Pending/Confirmed bookings are taken. Set it to the number of crews/teams you can field at once, e.g. 4 for peak days like Christmas.</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1.5">How many events your team can handle on the same date, regardless of time (1 to 100). A date only shows as fully booked once this many Pending/Confirmed bookings are taken. Set it to the number of crews/teams you can field at once, e.g. 4 for peak days like Christmas.</p>
+                <p v-if="overCapacityDates.length" class="text-xs text-amber-600 dark:text-amber-400 mt-1.5 font-medium">
+                  Heads up: {{ overCapacityDates.length }} upcoming date{{ overCapacityDates.length === 1 ? '' : 's' }} already have more bookings than {{ businessForm.max_bookings_per_day }}
+                  ({{ overCapacityDates.slice(0, 3).map((d) => d.date + ' - ' + d.count).join(', ') }}{{ overCapacityDates.length > 3 ? ', ...' : '' }}).
+                  Existing bookings stay, but those dates will be closed to new bookings.
+                </p>
               </div>
             </div>
             <button v-if="isBusinessOwner" type="submit" :disabled="isSavingBusiness" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
@@ -180,14 +185,16 @@
         <!-- PASSWORD -->
         <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 transition-colors">
           <h3 class="font-bold text-gray-800 dark:text-gray-100 mb-4">Change Password</h3>
+          <div v-if="passwordSuccess" class="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm font-medium p-3 rounded-xl mb-4">{{ passwordSuccess }}</div>
+          <div v-if="passwordError" class="text-red-600 dark:text-red-300 text-sm font-medium mb-4">{{ passwordError }}</div>
           <form @submit.prevent="handleChangePassword" class="space-y-4">
             <div>
               <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">New Password</label>
-              <input v-model="newPassword" type="password" required minlength="8" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100" />
+              <input v-model="newPassword" type="password" required minlength="8" autocomplete="new-password" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100" />
             </div>
             <div>
               <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Confirm New Password</label>
-              <input v-model="confirmPassword" type="password" required minlength="8" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100" />
+              <input v-model="confirmPassword" type="password" required minlength="8" autocomplete="new-password" class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100" />
             </div>
             <button type="submit" :disabled="isChangingPassword" class="bg-gray-800 dark:bg-gray-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-900 dark:hover:bg-gray-600 disabled:opacity-50">
               {{ isChangingPassword ? 'Updating...' : 'Update Password' }}
@@ -201,18 +208,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMyProfile, updateMyProfile, uploadMyAvatar, changeMyPassword } from '../services/profileService'
 import { getMyBusiness, updateMyBusiness, uploadBusinessLogo, uploadBusinessCover, removeBusinessCover } from '../services/businessservice'
+import { getDatesOverCapacity } from '../services/bookingService'
 import { getStoredTheme, setTheme } from '../theme'
-import { validatePassword, validateImageFile, isValidPhMobile } from '../utils/validators'
+import { validatePassword, validateImageFile, isValidPhMobile, normalizePhMobile } from '../utils/validators'
 
 const router = useRouter()
 
 const isLoading = ref(true)
 const pageError = ref('')
 const successMessage = ref('')
+const isLoadError = ref(false)
+const passwordError = ref('')
+const passwordSuccess = ref('')
 
 const profile = ref({})
 const profileForm = ref({ full_name: '', contact_number: '' })
@@ -268,6 +279,24 @@ async function fetchBusiness() {
   }
 }
 
+// Warn when the owner types a limit lower than what upcoming dates already hold.
+const overCapacityDates = ref([])
+let overCapacityTimer = null
+watch(() => businessForm.value.max_bookings_per_day, (val) => {
+  clearTimeout(overCapacityTimer)
+  const cap = Number(val)
+  if (!Number.isInteger(cap) || cap < 1) { overCapacityDates.value = []; return }
+  overCapacityTimer = setTimeout(async () => {
+    try {
+      const rows = await getDatesOverCapacity(cap)
+      // Ignore a stale answer if the field changed while we were asking.
+      if (Number(businessForm.value.max_bookings_per_day) === cap) overCapacityDates.value = rows
+    } catch {
+      overCapacityDates.value = []
+    }
+  }, 400)
+})
+
 async function handleSaveBusiness() {
   if (!business.value) return
   isSavingBusiness.value = true
@@ -301,9 +330,13 @@ function goBack() {
   router.push(role === 'Staff' && currentUser.position === 'Driver' ? '/driver/deliveries' : '/admin/dashboard')
 }
 
+// Auto-clear a message after a few seconds. Each message has its own timer, so
+// an older flash can't wipe out a newer one.
+const flashTimers = new Map()
 function flash(setter, message, ms = 3000) {
+  clearTimeout(flashTimers.get(setter))
   setter.value = message
-  setTimeout(() => { setter.value = '' }, ms)
+  flashTimers.set(setter, setTimeout(() => { setter.value = '' }, ms))
 }
 
 async function fetchProfile() {
@@ -313,6 +346,7 @@ async function fetchProfile() {
     profile.value = data
     profileForm.value = { full_name: data.full_name || '', contact_number: data.contact_number || '' }
   } catch (error) {
+    isLoadError.value = true
     pageError.value = error.message || 'Failed to load your profile.'
   } finally {
     isLoading.value = false
@@ -321,6 +355,7 @@ async function fetchProfile() {
 
 async function handleSaveProfile() {
   pageError.value = ''
+  successMessage.value = ''
   if (!String(profileForm.value.full_name || '').trim()) {
     pageError.value = 'Full name is required.'
     return
@@ -331,7 +366,11 @@ async function handleSaveProfile() {
   }
   isSavingProfile.value = true
   try {
-    const updated = await updateMyProfile(currentUser.user_id, profileForm.value)
+    const updated = await updateMyProfile(currentUser.user_id, {
+      full_name: String(profileForm.value.full_name).trim(),
+      contact_number: profileForm.value.contact_number ? normalizePhMobile(profileForm.value.contact_number) : profileForm.value.contact_number,
+    })
+    profileForm.value = { full_name: updated.full_name || '', contact_number: updated.contact_number || '' }
     profile.value = { ...profile.value, ...updated }
     // Keep the cached user (used across the whole app) in sync too.
     const storedUser = JSON.parse(sessionStorage.getItem('user') || '{}')
@@ -355,6 +394,7 @@ async function handleAvatarChange(event) {
   }
   isUploadingAvatar.value = true
   pageError.value = ''
+  successMessage.value = ''
   try {
     const updated = await uploadMyAvatar(currentUser.user_id, file)
     profile.value = { ...profile.value, avatar_url: updated.avatar_url }
@@ -438,14 +478,15 @@ function toggleDarkMode() {
 }
 
 async function handleChangePassword() {
-  pageError.value = ''
+  passwordError.value = ''
+  passwordSuccess.value = ''
   if (newPassword.value !== confirmPassword.value) {
-    pageError.value = 'Passwords do not match.'
+    passwordError.value = 'Passwords do not match.'
     return
   }
   const passwordProblem = validatePassword(newPassword.value)
   if (passwordProblem) {
-    pageError.value = passwordProblem
+    passwordError.value = passwordProblem
     return
   }
   isChangingPassword.value = true
@@ -453,9 +494,9 @@ async function handleChangePassword() {
     await changeMyPassword(newPassword.value)
     newPassword.value = ''
     confirmPassword.value = ''
-    flash(successMessage, 'Password updated.')
+    flash(passwordSuccess, 'Password updated.')
   } catch (error) {
-    pageError.value = error.message || 'Failed to update password.'
+    passwordError.value = error.message || 'Failed to update password.'
   } finally {
     isChangingPassword.value = false
   }

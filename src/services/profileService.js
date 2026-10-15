@@ -2,6 +2,11 @@ import { supabase } from '../supabaseClient';
 
 // Lightweight query used by sidebars/top-navs across the app to show the
 // user's uploaded profile picture (falls back to initials if none set).
+// File extension from the real MIME type (a name like "photo" or "a.b.JPG" can't mislead it).
+export function imageExt(file) {
+  return { 'image/png': 'png', 'image/webp': 'webp' }[file?.type] || 'jpg';
+}
+
 export async function getMyAvatarUrl(userId) {
   const { data, error } = await supabase
     .from('tbl_profiles')
@@ -40,7 +45,7 @@ export async function updateMyProfile(userId, { full_name, contact_number }) {
 // File is stored at {userId}/avatar.{ext} so the RLS storage policies
 // (which check the first folder segment against auth.uid()) allow it.
 export async function uploadMyAvatar(userId, file) {
-  const ext = file.name.split('.').pop();
+  const ext = imageExt(file);
   const filePath = `${userId}/avatar.${ext}`;
 
   const { error: uploadError } = await supabase.storage

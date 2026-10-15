@@ -730,10 +730,12 @@
                       day.isTaken ? 'bg-red-100 dark:bg-red-900/30 text-red-400 line-through cursor-not-allowed' :
                       day.isPast ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' :
                       'text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'"
-                  >{{ day.day }}</button>
+                    :title="day.slotsLeft ? day.slotsLeft + ' slot' + (day.slotsLeft === 1 ? '' : 's') + ' left' : ''"
+                  >{{ day.day }}<span v-if="day.slotsLeft && !day.isSelected" class="ml-0.5 text-[8px] font-bold text-amber-600 dark:text-amber-400">·{{ day.slotsLeft }}</span></button>
                 </div>
                 <div class="flex items-center justify-center gap-4 mt-3 text-[10px] text-gray-400 dark:text-gray-500">
-                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-200 dark:bg-red-900/50 inline-block"></span> Booked</span>
+                  <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-red-200 dark:bg-red-900/50 inline-block"></span> Fully booked</span>
+                  <span class="flex items-center gap-1"><span class="text-[10px] font-bold text-amber-600 dark:text-amber-400">·2</span> Slots left</span>
                   <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-600 inline-block"></span> Selected</span>
                 </div>
               </div>
@@ -1471,7 +1473,7 @@ import { getMyProfile } from '../services/profileService'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { getPlatformSettings, bookingDateRange, checkCancellation, computeFees, SETTINGS_DEFAULTS } from '../services/platformSettingsService'
 import { useRouter } from 'vue-router'
-import { PORTIONS, getSelectionsForBookings, createBooking, getMyBookings, checkDateConflict, getTakenDates, cancelMyBooking, updateMyBooking, setBookingSelections, getBookingSelections } from '../services/bookingService'
+import { PORTIONS, getSelectionsForBookings, createBooking, getMyBookings, checkDateConflict, getMonthUsage, dateFullMessage, cancelMyBooking, updateMyBooking, setBookingSelections, getBookingSelections } from '../services/bookingService'
 import { getAllPackages, getPackageMenu, MENU_CATEGORIES } from '../services/packageService'
 import {
   DIETARY_TAGS, getCatalogStats, getPackagePhotos, getPackageInclusions, getBusinessProfile, getBusinessPaymentInstructions,
@@ -1574,7 +1576,11 @@ const platformMoney = (n) => `${platform.value.currency_symbol}${formatPrice(n)}
 // of only finding out after (handleDateCheck still runs as the final,
 // race-condition-safe check right before submit).
 const calendarViewDate = ref(startOfMonth(new Date())) // first day of the month currently shown
-const takenDates = ref(new Set()) // Set of 'YYYY-MM-DD' strings, for the viewed month
+// { 'YYYY-MM-DD': { taken, capacity, full? } } for the viewed month (dates with >= 1 booking)
+const dateUsage = ref({})
+function isDateFull(u) {
+  return !!u && (u.full === true || (u.capacity > 0 && u.taken >= u.capacity))
+}
 const isLoadingCalendar = ref(false)
 const showCalendar = ref(false)
 
@@ -1613,7 +1619,11 @@ const calendarDays = computed(() => {
       day: d,
       dateStr,
       isPast: dateStr < todayStr,
-      isTaken: takenDates.value.has(dateStr),
+      isTaken: isDateFull(dateUsage.value[dateStr]),
+      slotsLeft: (() => {
+        const u = dateUsage.value[dateStr]
+        return u && !u.full && u.capacity > 1 && u.taken < u.capacity ? u.capacity - u.taken : null
+      })(),
       isSelected: form.value.event_date === dateStr,
     })
   }
@@ -1631,13 +1641,13 @@ async function loadCalendarMonth() {
   const last = new Date(first.getFullYear(), first.getMonth() + 1, 0)
   isLoadingCalendar.value = true
   try {
-    const dates = await getTakenDates(selectedBusinessId.value, toDateStr(first), toDateStr(last))
+    const usage = await getMonthUsage(selectedBusinessId.value, toDateStr(first), toDateStr(last))
     if (token !== calendarLoadToken) return
-    takenDates.value = new Set(dates)
+    dateUsage.value = usage
   } catch (error) {
     if (token !== calendarLoadToken) return
     console.error('Failed to load calendar availability:', error)
-    takenDates.value = new Set()
+    dateUsage.value = {}
   } finally {
     if (token === calendarLoadToken) isLoadingCalendar.value = false
   }
@@ -2507,7 +2517,7 @@ function clearBusiness() {
   packageMenu.value = { limits: [], itemsByCategory: {} }
   addonQuantities.value = {}
   businessAddons.value = []
-  takenDates.value = new Set()
+  dateUsage.value = {}
   showCalendar.value = false
 }
 
@@ -2737,7 +2747,7 @@ async function handleEditDateCheck() {
   try {
     const result = await checkDateConflict(editForm.value.event_date, editBusinessId.value || null, bookingToEdit.value.booking_id)
     if (result.conflict) {
-      editConflictWarning.value = 'This date already has a booking. Please choose another date before saving.'
+      editConflictWarning.value = dateFullMessage(editForm.value.event_date, result)
     }
   } catch (error) {
     console.error('Conflict check failed:', error)
@@ -2854,7 +2864,7 @@ async function handleDateCheck() {
   try {
     const result = await checkDateConflict(form.value.event_date, selectedBusinessId.value || null)
     if (result.conflict) {
-      conflictWarning.value = 'This date already has a booking. Please choose another date before submitting.'
+      conflictWarning.value = dateFullMessage(form.value.event_date, result)
     }
   } catch (error) {
     console.error('Conflict check failed:', error)
@@ -2961,7 +2971,7 @@ async function submitBooking() {
     packageMenu.value = { limits: [], itemsByCategory: {} }
     addonQuantities.value = {}
     businessAddons.value = []
-    takenDates.value = new Set()
+    dateUsage.value = {}
     conflictWarning.value = ''
     await loadMyBookings()
     // Stay on Book Catering: the confirmation screen is shown here, with a
