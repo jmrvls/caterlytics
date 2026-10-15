@@ -793,7 +793,7 @@ import { logoutUser } from '../services/authService'
 import { resetNotifications } from '../composables/useNotifications'
 import logoUrl from '../Assets/logofinal.png'
 import { toTitleCase } from '../utils/textFormat'
-import { localToday, formatDateOnly } from '../utils/date'
+import { localToday, toLocalDateStr, formatDateOnly } from '../utils/date'
 import { ref, computed, onMounted } from 'vue'
 import NotificationBell from '../Components/NotificationBell.vue'
 import { useSidebarState } from '../composables/useSidebarState'
@@ -854,6 +854,29 @@ const activePreset = ref('all')
 // Sales follow the booking's event date (same as the Bookings report).
 function paymentDate(p) {
   return p.tbl_bookings?.event_date
+}
+
+// Local YYYY-MM-DD (never UTC, so the PH date doesn't shift back a day).
+const toISODate = (d) => toLocalDateStr(d)
+
+// Quick range buttons: Today / This Week (Mon-Sun) / This Month / All.
+function applyPreset(key) {
+  activePreset.value = key
+  const now = new Date()
+  if (key === 'today') {
+    dateFrom.value = dateTo.value = toISODate(now)
+  } else if (key === 'week') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7))
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6)
+    dateFrom.value = toISODate(start)
+    dateTo.value = toISODate(end)
+  } else if (key === 'month') {
+    dateFrom.value = toISODate(new Date(now.getFullYear(), now.getMonth(), 1))
+    dateTo.value = toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+  } else {
+    dateFrom.value = ''
+    dateTo.value = ''
+  }
 }
 
 const generatedOn = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
