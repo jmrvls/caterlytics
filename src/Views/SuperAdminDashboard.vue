@@ -1096,21 +1096,6 @@ watch(() => route.query.filter, (f) => {
   else if (f === undefined) statusFilter.value = 'All'
 })
 
-// The reverse direction: when a chip / stat card changes the filter, mirror it
-// into the URL. Without this the URL kept the old ?filter=Pending, so clicking
-// "View Pending Businesses" in the bell after switching chips pushed the SAME
-// location (a no-op) and the table never switched back to Pending.
-watch(statusFilter, (f) => {
-  const current = route.query.filter
-  if (f === 'All') {
-    if (current === undefined) return
-    const { filter, ...rest } = route.query
-    router.replace({ query: rest })
-  } else if (current !== f) {
-    router.replace({ query: { ...route.query, filter: f } })
-  }
-})
-
 const stats = ref({
   total_businesses: 0, pending_businesses: 0, active_businesses: 0,
   suspended_businesses: 0, rejected_businesses: 0, closed_businesses: 0,
@@ -1125,7 +1110,10 @@ const mainTab = ref(MAIN_TABS.includes(route.query.tab) ? route.query.tab : 'Ten
 // up to date once it is open; this is the initial load.
 const licensePending = ref(0)
 // The bell's license alerts link here with ?tab=Compliance (also works while already on this page).
-watch(() => route.query.tab, (t) => { if (MAIN_TABS.includes(t)) mainTab.value = t })
+watch(() => route.query.tab, (t) => {
+  if (MAIN_TABS.includes(t)) mainTab.value = t
+  else if (t === undefined) mainTab.value = 'Tenants' // e.g. the bell's "View Pending Businesses" link has no ?tab
+})
 getLicenseQueue()
   .then((rows) => { licensePending.value = (rows || []).filter((d) => d.verification_status === 'Pending').length })
   .catch(() => {})
@@ -1276,8 +1264,25 @@ watch(() => route.query.lifecycle, (f) => {
     mainTab.value = 'Tenants'
     statusFilter.value = 'All'
     lifecycleFilter.value = f
+  } else if (f === undefined) {
+    lifecycleFilter.value = ''
   }
 })
+
+// The reverse direction: mirror the chips / tabs into the URL in ONE place, so
+// the URL never keeps a stale ?filter / ?lifecycle / ?tab. Without this, clicking
+// the same bell link twice pushed the SAME location (a no-op) and the page never
+// switched back. Built from the current state in one go so two watchers can't
+// overwrite each other with a stale route.query.
+function syncQuery() {
+  const q = { ...route.query }
+  const put = (key, value, empty) => { if (value === empty) delete q[key]; else q[key] = value }
+  put('filter', statusFilter.value, 'All')
+  put('lifecycle', lifecycleFilter.value, '')
+  put('tab', mainTab.value, 'Tenants')
+  if (['filter', 'lifecycle', 'tab'].some((k) => q[k] !== route.query[k])) router.replace({ query: q })
+}
+watch([statusFilter, lifecycleFilter, mainTab], syncQuery)
 
 function isLiveTenant(b) { return b.status === 'Active' || b.status === 'Suspended' }
 function isExpiring(b) {
@@ -1909,7 +1914,10 @@ function exportRows(selectedOnly) {
 }
 
 function csvCell(v) {
-  const s = v == null ? '' : String(v)
+  let s = v == null ? '' : String(v)
+  // Tenant-controlled text (business names etc.): stop Excel/Sheets from running
+  // a cell that starts with = + - @ as a formula. Numbers (e.g. days_left) are left alone.
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 

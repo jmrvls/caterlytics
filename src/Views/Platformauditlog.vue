@@ -330,8 +330,10 @@ async function exportCsv() {
     const a = document.createElement('a')
     a.href = url
     a.download = `platform-audit-log-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
     logActivity('EXPORT', 'Platform Audit Log', `Exported ${data.length} platform audit rows`)
   } catch (e) {
     pageError.value = e.message || 'Export failed.'

@@ -196,27 +196,20 @@ async function inviteErrorMessage(error, fallback) {
 }
 
 export async function inviteClientAdmin({ business_name, full_name, email, username, contact_number, subscription_months }) {
-  const { data, error } = await supabase.functions.invoke('invite-business', {
+  // The edge function creates the business, sends the invite AND sets the
+  // subscription expiry (subscription_months) in one go, so there is no
+  // separate client-side renew step any more.
+  const { data, error } = await supabase.functions.invoke('invite-client-admin', {
     body: {
       business_name,
-      owner_name: full_name,
+      full_name,
       email,
-      username: username || undefined,
+      username,
       contact_number: contact_number || undefined,
+      subscription_months,
       redirectTo: `${window.location.origin}/reset-password`,
     },
   });
   if (error) throw new Error(await inviteErrorMessage(error, 'Failed to send the invitation.'));
-
-  // Paid months -> subscription expiry. The invitation is already sent at this
-  // point, so a failure here must not look like the whole invite failed.
-  let subscriptionNote = '';
-  if (subscription_months > 0 && data?.business_id) {
-    try {
-      await renewBusinessSubscription(data.business_id, subscription_months);
-    } catch {
-      subscriptionNote = ' (Subscription expiry not set - use Renew on the tenant.)';
-    }
-  }
-  return { ...data, message: `Invitation sent.${subscriptionNote}` };
+  return { ...data, message: 'Invitation sent.' };
 }

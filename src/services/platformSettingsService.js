@@ -82,6 +82,21 @@ export async function savePlatformSettings(values) {
 
 export function validateSettings(s) {
   const int = (x) => Number(x);
+  // Number('') is 0, so a cleared field used to pass validation and silently save as 0.
+  const REQUIRED_NUMBERS = {
+    min_lead_days: 'Minimum lead time',
+    max_advance_days: 'Maximum advance booking',
+    max_guests: 'Maximum guests',
+    cancel_min_days: 'Cancellation cut-off',
+    tax_rate_percent: 'Tax rate',
+    service_fee_value: 'Service fee',
+  };
+  for (const [key, label] of Object.entries(REQUIRED_NUMBERS)) {
+    const v = s[key];
+    if (v === '' || v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) {
+      throw new Error(`${label} is required.`);
+    }
+  }
   const isInt = (x) => Number.isInteger(int(x));
 
   if (!isInt(s.min_lead_days) || int(s.min_lead_days) < 0 || int(s.min_lead_days) > 365) {
