@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans">
 
     <!-- TOP NAV -->
-    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
+    <header data-app-header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
       <div class="w-full px-4 sm:px-6 lg:px-10 py-3 sm:py-4 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <img :src="logoUrl" alt="Logo" class="w-8 h-8 object-contain" />
@@ -497,7 +497,9 @@
 
       <!-- ============ STEP 3: PACKAGE PAGE + BOOKING FORM (Shopee product-page style) ============ -->
       <div v-else-if="activeTab === 'Book Catering'">
-        <button type="button" @click="backToPackages" class="flex items-center gap-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 mb-4">
+        <!-- Back + breadcrumb stay pinned just under the header so they never get covered -->
+        <div data-back-bar class="sticky z-[9] bg-gray-50 dark:bg-gray-900 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 pt-1" style="top: var(--app-hdr, 4.5rem)">
+        <button type="button" @click="backToPackages" class="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-sm px-3.5 py-2 min-h-[40px] rounded-lg transition mb-3">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -507,12 +509,13 @@
         <p class="text-xs text-gray-400 dark:text-gray-500 mb-4 truncate">
           {{ selectedBusiness?.business_name }} <span class="mx-1">›</span> <span class="text-gray-600 dark:text-gray-300 font-medium">{{ selectedPackage?.package_name }}</span>
         </p>
+        </div>
 
         <form @submit.prevent="submitBooking">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
 
-            <!-- LEFT: photo gallery, stays put while the buy-box scrolls -->
-            <div class="lg:sticky lg:top-24 lg:self-start">
+            <!-- LEFT: photo gallery, fixed in place (sticky) while the buy-box scrolls; never taller than the screen -->
+            <div class="lg:sticky lg:top-[calc(var(--app-hdr,4.5rem)_+_var(--app-back,4rem))] lg:self-start lg:max-h-[calc(100vh_-_var(--app-hdr,4.5rem)_-_var(--app-back,4rem)_-_6rem)] lg:overflow-y-auto no-scrollbar overscroll-contain">
               <PackageGallery :images="galleryImages" :alt="selectedPackage?.package_name || 'Package photo'" />
 
               <!-- Catering store card (fills the space under the thumbnail) -->
@@ -2017,6 +2020,27 @@ watch(showCoverViewer, (open) => {
   else window.removeEventListener('keydown', onCoverViewerKey)
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', onCoverViewerKey))
+// Keeps the pinned "Back to packages" bar and the sticky photo column just below the header
+// (measures the real heights, so it works on any screen size / zoom).
+let stickyObserver = null
+function syncStickyOffsets() {
+  const hdr = document.querySelector('[data-app-header]')
+  const back = document.querySelector('[data-back-bar]')
+  const root = document.documentElement.style
+  if (hdr) root.setProperty('--app-hdr', hdr.offsetHeight + 'px')
+  root.setProperty('--app-back', (back ? back.offsetHeight : 0) + 'px')
+}
+onMounted(() => {
+  syncStickyOffsets()
+  window.addEventListener('resize', syncStickyOffsets)
+  stickyObserver = new ResizeObserver(syncStickyOffsets)
+  stickyObserver.observe(document.body)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', syncStickyOffsets)
+  stickyObserver?.disconnect()
+})
+
 const profileBusinessId = ref('')
 // Chat: set when the client taps "Message" on a business profile.
 const chatStartBusinessId = ref(null)

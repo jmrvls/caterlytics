@@ -469,7 +469,7 @@
 
     <!-- ============ CREATE / EDIT PACKAGE MODAL ============ -->
     <div v-if="showFormModal" @mousedown.self="closeFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[92vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{{ isEditing ? 'Edit Package' : 'New Package' }}</h3>
 
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -516,7 +516,7 @@
           </div>
           <div>
             <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Description</label>
-            <textarea v-model="form.description" rows="3" placeholder="What's included in this package..." class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none text-gray-900 dark:text-gray-100"></textarea>
+            <textarea v-model="form.description" rows="12" placeholder="What's included in this package..." class="w-full mt-1 p-3 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y min-h-[10rem] text-gray-900 dark:text-gray-100"></textarea>
           </div>
           <div>
             <label class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Price per Head (₱)</label>
