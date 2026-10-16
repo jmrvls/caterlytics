@@ -130,12 +130,12 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 overflow-x-hidden w-full min-w-0">
+    <main class="flex-1 p-3 sm:p-6 xl:p-8 pt-20 lg:pt-8 overflow-x-hidden w-full min-w-0">
       <div class="max-w-none 2xl:max-w-[1920px] mx-auto">
 
         <!-- Toolbar -->
-        <div class="flex flex-row items-center justify-between gap-2 sm:gap-3 mb-4">
-          <div class="relative flex-1 max-w-sm">
+        <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 mb-4">
+          <div class="relative flex-1 min-w-[10rem] sm:max-w-sm">
             <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
             </svg>
@@ -147,14 +147,14 @@
             />
           </div>
 
-          <div class="flex items-center gap-3 flex-shrink-0">
+          <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button @click="exportPdf" :disabled="!filteredItems.length" class="hidden sm:flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap" title="Download the list below as a PDF file">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
               </svg>
               Export PDF
             </button>
-            <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
+            <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
@@ -197,7 +197,7 @@
             </svg>
             <span>{{ lowStockItems.length }} item(s) at or below threshold: {{ lowStockItems.map(i => i.item_name).join(', ') }}</span>
           </div>
-          <div class="flex gap-2 flex-shrink-0">
+          <div class="flex flex-wrap gap-2 sm:flex-shrink-0">
             <button type="button" @click="levelFilter = 'low'" class="px-3 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40">Show them</button>
             <button type="button" @click="reorderAll" class="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700">Reorder</button>
           </div>
@@ -211,7 +211,7 @@
             </svg>
             <span>{{ expiryAlertItems.map(i => `${i.item_name} (${expiryInfo(i).label.toLowerCase()})`).join(', ') }}. Use it first, or log it as waste if it has spoiled.</span>
           </div>
-          <div class="flex gap-2 flex-shrink-0">
+          <div class="flex flex-wrap gap-2 sm:flex-shrink-0">
             <button type="button" @click="levelFilter = 'expiring'" class="px-3 py-1.5 text-xs font-semibold border border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40">Show them</button>
             <button type="button" @click="router.push('/admin/waste')" class="px-3 py-1.5 text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700">Waste Tracking</button>
           </div>
@@ -342,25 +342,25 @@
           </div>
 
           <div class="flex gap-2">
-            <select v-model="categoryFilter" aria-label="Filter by category" class="py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+            <select v-model="categoryFilter" aria-label="Filter by category" class="min-w-0 flex-1 sm:flex-none py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
               <option value="">All categories</option>
               <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
             </select>
-            <select v-model="sortKey" aria-label="Sort by" class="md:hidden py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+            <select v-model="sortKey" aria-label="Sort by" class="lg:hidden min-w-0 flex-1 sm:flex-none py-2.5 px-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
               <option v-for="o in sortOptions" :key="o.value" :value="o.value">Sort: {{ o.label }}</option>
             </select>
           </div>
         </div>
 
         <!-- Inventory — mobile card list (phone-friendly, replaces the table below md) -->
-        <div class="md:hidden space-y-3">
-          <div v-if="isLoading" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">Loading inventory...</div>
-          <div v-else-if="filteredItems.length === 0" class="text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
+        <div class="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div v-if="isLoading" class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500 text-sm">Loading inventory...</div>
+          <div v-else-if="filteredItems.length === 0" class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
             {{ items.length === 0 ? 'No items yet. Tap "New Item" to add one.' : 'No items match your filters.' }}
           </div>
           <div
             v-for="i in filteredItems" :key="i.item_id"
-            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4"
+            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4 min-w-0"
           >
             <div class="flex items-start justify-between gap-3 mb-3">
               <div class="min-w-0">
@@ -424,19 +424,19 @@
         </div>
 
         <!-- Inventory Table — desktop / tablet -->
-        <div class="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
+        <div class="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
                 <tr>
-                  <th v-for="c in columns" :key="c.key" :class="[c.align === 'right' ? 'text-right' : 'text-left', c.cls]" class="px-4 py-3 font-semibold whitespace-nowrap" :aria-sort="sortKey === c.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+                  <th v-for="c in columns" :key="c.key" :class="[c.align === 'right' ? 'text-right' : 'text-left', c.cls]" class="px-3 xl:px-4 py-3 font-semibold whitespace-nowrap" :aria-sort="sortKey === c.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
                     <button v-if="c.sortable" type="button" @click="setSort(c.key)" :class="sortKey === c.key ? 'text-emerald-600 dark:text-emerald-400' : ''" class="inline-flex items-center gap-1 uppercase font-semibold tracking-wide hover:text-emerald-600 dark:hover:text-emerald-400">
                       {{ c.label }}
                       <span class="w-3 text-[10px]" aria-hidden="true">{{ sortKey === c.key ? (sortDir === 'asc' ? '▲' : '▼') : '' }}</span>
                     </button>
                     <span v-else>{{ c.label }}</span>
                   </th>
-                  <th class="text-right px-4 py-3 font-semibold">Actions</th>
+                  <th class="text-right px-3 xl:px-4 py-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -455,39 +455,41 @@
                   </td>
                 </tr>
                 <tr class="hover:bg-gray-50/60 dark:hover:bg-gray-700/60">
-                  <td class="px-4 py-3.5 min-w-[12rem]">
+                  <td class="px-3 xl:px-4 py-3.5 min-w-[9rem] xl:min-w-[12rem]">
                     <button type="button" @click="openAdjustModal(i)" class="font-medium text-left text-gray-800 dark:text-gray-100 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline" title="Stock in/out and history">{{ i.item_name }}</button>
+                    <div v-if="i.category" class="text-xs text-gray-500 dark:text-gray-400 xl:hidden">{{ i.category }}</div>
                     <div v-if="supplierName(i.supplier_id)" class="text-xs text-gray-500 dark:text-gray-400">
                       {{ supplierName(i.supplier_id) }}
                     </div>
                   </td>
-                  <td class="px-4 py-3.5 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ i.category || '—' }}</td>
-                  <td class="px-4 py-3.5 text-right min-w-[8rem]">
+                  <td class="px-3 xl:px-4 py-3.5 text-gray-600 dark:text-gray-300 whitespace-nowrap hidden xl:table-cell">{{ i.category || '—' }}</td>
+                  <td class="px-3 xl:px-4 py-3.5 text-right min-w-[6.5rem] xl:min-w-[8rem]">
                     <div class="font-semibold text-gray-800 dark:text-gray-100 tabular-nums">{{ formatQty(i.quantity, i.unit || 'kg') }}</div>
                     <div class="h-1.5 bg-gray-100 dark:bg-gray-700 mt-1 ml-auto w-24" role="presentation">
                       <div :class="LEVELS[stockLevel(i)].bar" class="h-full" :style="{ width: Math.round(stockRatio(i) * 100) + '%' }"></div>
                     </div>
                     <div v-if="lastMoved[i.item_id]" class="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">updated {{ timeAgo(lastMoved[i.item_id]) }}</div>
                   </td>
-                  <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums hidden xl:table-cell">{{ formatQty(i.low_stock_threshold, i.unit || 'kg') }}</td>
-                  <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums">₱{{ formatCost(i.unit_cost) }}</td>
-                  <td class="px-4 py-3.5 text-right text-gray-800 dark:text-gray-100 tabular-nums">
+                  <td class="px-3 xl:px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums hidden 2xl:table-cell">{{ formatQty(i.low_stock_threshold, i.unit || 'kg') }}</td>
+                  <td class="px-3 xl:px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums hidden xl:table-cell">₱{{ formatCost(i.unit_cost) }}</td>
+                  <td class="px-3 xl:px-4 py-3.5 text-right text-gray-800 dark:text-gray-100 tabular-nums">
                     <div>₱{{ formatMoney(stockValue(i)) }}</div>
+                    <div class="text-[11px] text-gray-400 dark:text-gray-500 xl:hidden">@ ₱{{ formatCost(i.unit_cost) }}</div>
                     <button type="button" @click="openCalc(i)" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View computation</button>
                   </td>
-                  <td class="px-4 py-3.5 whitespace-nowrap">
+                  <td class="px-3 xl:px-4 py-3.5 whitespace-nowrap">
                     <span v-if="expiryInfo(i)" :class="EXPIRY_TEXT[expiryInfo(i).state]" class="text-xs font-semibold">{{ expiryInfo(i).label }}</span>
                     <span v-else class="text-xs text-gray-400 dark:text-gray-500">—</span>
                     <div v-if="expiryInfo(i)" class="text-[11px] text-gray-400 dark:text-gray-500">{{ formatEventDate(i.expiry_date) }}</div>
                   </td>
-                  <td class="px-4 py-3.5 align-middle">
+                  <td class="px-3 xl:px-4 py-3.5 align-middle">
                     <span :class="LEVELS[stockLevel(i)].text" class="inline-block align-middle text-xs font-semibold leading-5">{{ LEVELS[stockLevel(i)].label }}</span>
                     <div v-if="needByItem.get(i.item_id)?.short_by > 0" class="text-[11px] font-semibold text-red-600 dark:text-red-400">Short for pending events</div>
                   </td>
-                  <td class="px-4 py-3.5">
-                    <div class="flex items-center justify-end gap-2">
+                  <td class="px-3 xl:px-4 py-3.5">
+                    <div class="flex flex-wrap items-center justify-end gap-1.5 xl:gap-2">
                       <button @click="openAdjustModal(i)" class="px-3 h-8 flex items-center justify-center rounded-none border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700" title="Stock In / Out">Adjust</button>
-                      <button v-if="needsReorder(i)" @click="reorderItem(i)" class="px-3 h-8 flex items-center justify-center rounded-none bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700" :title="`Order about ${reorderQtyFor(i)} ${i.unit || 'kg'} from a supplier`">Reorder <span class="ml-1 font-normal opacity-90">{{ reorderQtyFor(i) }} {{ i.unit || 'kg' }}</span></button>
+                      <button v-if="needsReorder(i)" @click="reorderItem(i)" class="px-3 h-8 flex items-center justify-center rounded-none bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700" :title="`Order about ${reorderQtyFor(i)} ${i.unit || 'kg'} from a supplier`">Reorder <span class="ml-1 font-normal opacity-90 hidden 2xl:inline">{{ reorderQtyFor(i) }} {{ i.unit || 'kg' }}</span></button>
                       <button @click="openEditModal(i)" class="w-8 h-8 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Edit item" aria-label="Edit item">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -512,7 +514,7 @@
 
     <!-- ============ CREATE / EDIT MODAL ============ -->
     <div v-if="showFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{{ editingItem ? 'Edit Item' : 'New Item' }}</h3>
 
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -672,7 +674,7 @@
 
     <!-- ============ STOCK IN / OUT MODAL ============ -->
     <div v-if="showAdjustModal && adjustItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Adjust Stock</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
           <span class="font-semibold text-gray-700 dark:text-gray-200">{{ adjustItem.item_name }}</span>
@@ -922,10 +924,10 @@ const EXPIRY_TEXT = {
 
 const columns = [
   { key: 'item', label: 'Item', align: 'left', sortable: true },
-  { key: 'category', label: 'Category', align: 'left', sortable: true },
+  { key: 'category', label: 'Category', align: 'left', sortable: true, cls: 'hidden xl:table-cell' },
   { key: 'quantity', label: 'Quantity', align: 'right', sortable: true },
-  { key: 'threshold', label: 'Alert at', align: 'right', sortable: false, cls: 'hidden xl:table-cell' },
-  { key: 'cost', label: 'Unit cost', align: 'right', sortable: true },
+  { key: 'threshold', label: 'Alert at', align: 'right', sortable: false, cls: 'hidden 2xl:table-cell' },
+  { key: 'cost', label: 'Unit cost', align: 'right', sortable: true, cls: 'hidden xl:table-cell' },
   { key: 'value', label: 'Stock value', align: 'right', sortable: true },
   { key: 'expiry', label: 'Expiry', align: 'left', sortable: true },
   { key: 'status', label: 'Status', align: 'left', sortable: true }
