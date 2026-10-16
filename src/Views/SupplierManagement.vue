@@ -419,88 +419,174 @@
     </div>
 
     <!-- VIEW COMPUTATION -->
-    <div v-if="calcView" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50" @click="closeCalc"></div>
-      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-xl" role="dialog" aria-modal="true">
-        <div class="flex items-start justify-between gap-3 mb-4">
-          <div class="min-w-0">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Computation</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcTitle }}</p>
-          </div>
-          <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none" aria-label="Close">&times;</button>
-        </div>
-
-        <!-- Card: Active suppliers -->
-        <div v-if="calcView.kind === 'card' && calcView.key === 'active'" class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
-          <p>Suppliers marked active = <strong>{{ activeSuppliers.length }}</strong> of {{ suppliers.length }} total</p>
-          <p v-if="suppliers.length - activeSuppliers.length" class="text-xs text-gray-500 dark:text-gray-400">{{ suppliers.length - activeSuppliers.length }} inactive supplier(s) are not counted.</p>
-        </div>
-
-        <!-- Card: Open / Overdue orders -->
-        <div v-else-if="calcView.kind === 'card' && (calcView.key === 'open' || calcView.key === 'overdue')" class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            <template v-if="calcView.key === 'open'">Open = orders with status Ordered or Partially Received.</template>
-            <template v-else>Overdue = open orders whose expected date is before today ({{ formatShortDate(today) }}).</template>
-          </p>
-          <p v-if="!calcOrderRows.length" class="text-gray-500 dark:text-gray-400">None right now.</p>
-          <div v-for="o in calcOrderRows" :key="o.po_id" class="flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-1">
-            <span class="min-w-0 truncate">{{ o.po_number }} · {{ supplierOf(o)?.supplier_name || 'Supplier' }}</span>
-            <span class="text-xs whitespace-nowrap" :class="overdue(o) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'">
-              {{ o.expected_date ? 'Expected ' + formatShortDate(o.expected_date) : 'No date' }}<template v-if="overdue(o)"> · {{ -daysFrom(o.expected_date, today) }}d late</template>
-            </span>
-          </div>
-          <p class="pt-1">Count = <strong>{{ calcOrderRows.length }}</strong></p>
-        </div>
-
-        <!-- Card: Value still to arrive -->
-        <div v-else-if="calcView.kind === 'card' && calcView.key === 'arrive'" class="text-sm text-gray-700 dark:text-gray-200 space-y-3">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Only the part not yet delivered: (ordered − received) × unit cost, for every open order.</p>
-          <p v-if="!arriveRows.length" class="text-gray-500 dark:text-gray-400">No open orders.</p>
-          <div v-for="r in arriveRows" :key="r.po.po_id">
-            <p class="font-semibold">{{ r.po.po_number }} · {{ supplierOf(r.po)?.supplier_name || 'Supplier' }}</p>
-            <p v-for="(l, idx) in r.lines" :key="idx" class="text-xs text-gray-600 dark:text-gray-300 tabular-nums">
-              {{ l.name }}: ({{ l.ordered }} − {{ l.received }}) = {{ l.left }} {{ l.unit }} × {{ formatPeso(l.cost) }} = {{ formatPeso(l.amount) }}
-            </p>
-            <p class="text-xs tabular-nums text-right">Subtotal {{ formatPeso(r.subtotal) }}</p>
-          </div>
-          <p class="border-t border-gray-200 dark:border-gray-700 pt-2 tabular-nums">
-            <template v-if="arriveRows.length > 1">{{ arriveRows.map((r) => formatPeso(r.subtotal)).join(' + ') }} = </template><strong>{{ formatPeso(arriveTotal) }}</strong>
-          </p>
-        </div>
-
-        <!-- Supplier row -->
-        <div v-else-if="calcView.kind === 'supplier' && supplierCalc" class="text-sm text-gray-700 dark:text-gray-200 space-y-4">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Received value</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Delivered quantity × unit cost, on every order that is not Draft or Cancelled.</p>
-            <p v-if="!supplierCalc.orders.length" class="text-gray-500 dark:text-gray-400">No orders yet.</p>
-            <div v-for="r in supplierCalc.orders" :key="r.po.po_id" class="mb-1">
-              <p class="font-semibold">{{ r.po.po_number }} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">({{ statusOf(r.po.status).label }})</span></p>
-              <p v-for="(l, idx) in r.lines" :key="idx" class="text-xs text-gray-600 dark:text-gray-300 tabular-nums">{{ l.name }}: {{ l.received }} {{ l.unit }} × {{ formatPeso(l.cost) }} = {{ formatPeso(l.amount) }}</p>
-              <p v-if="!r.lines.length" class="text-xs text-gray-400">Nothing delivered yet.</p>
+    <Transition name="calc-modal">
+      <div v-if="calcView" class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4">
+        <div class="absolute inset-0 bg-black/50" @click="closeCalc"></div>
+        <div class="calc-panel relative bg-white dark:bg-gray-800 w-full sm:max-w-lg max-h-[92vh] flex flex-col shadow-xl rounded-t-2xl sm:rounded-xl" role="dialog" aria-modal="true" aria-labelledby="calc-title">
+          <!-- Header -->
+          <div class="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div class="min-w-0">
+              <h3 id="calc-title" class="text-lg font-bold text-gray-800 dark:text-gray-100">Computation</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcTitle }}<span v-if="calcView.kind === 'supplier' && supplierCalc?.supplier?.category"> · {{ supplierCalc.supplier.category }}</span></p>
             </div>
-            <p class="border-t border-gray-200 dark:border-gray-700 pt-2 tabular-nums">Total received = <strong>{{ formatPeso(supplierCalc.spent) }}</strong></p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Orders counted = {{ supplierCalc.orders.length }} · Still open = {{ supplierCalc.open }}</p>
+            <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none -mt-1" aria-label="Close">&times;</button>
           </div>
 
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Reliability</p>
-            <p v-if="!supplierCalc.completed" class="text-gray-500 dark:text-gray-400">No completed (fully received) orders yet, so nothing to rate.</p>
-            <template v-else>
-              <p class="tabular-nums">Completed orders = {{ supplierCalc.completed }} <span class="text-xs text-gray-500 dark:text-gray-400">(a rating needs at least {{ SCORECARD_MIN_ORDERS }})</span></p>
-              <p class="tabular-nums">On time = {{ supplierCalc.onTime }} ÷ {{ supplierCalc.dated }} orders received on or before the expected date = <strong>{{ supplierCalc.onTimePct === null ? '—' : supplierCalc.onTimePct + '%' }}</strong></p>
-              <p class="tabular-nums">Filled = {{ supplierCalc.received }} ÷ {{ supplierCalc.ordered }} ordered qty = <strong>{{ supplierCalc.fillPct === null ? '—' : supplierCalc.fillPct + '%' }}</strong></p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Reliable = 90%+ on time and 95%+ filled · Fair = 70%+ and 85%+ · otherwise Needs attention.</p>
-              <p class="mt-1">Rating: <strong>{{ scoreOf(supplierCalc.supplier)?.rating || 'Not enough orders yet' }}</strong></p>
+          <div class="overflow-y-auto px-5 sm:px-6 py-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <!-- Card: Active suppliers -->
+            <template v-if="calcView.kind === 'card' && calcView.key === 'active'">
+              <section class="border-l-4 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10 pl-4 pr-3 py-3">
+                <p class="calc-label"><span aria-hidden="true">🏢</span> Active suppliers</p>
+                <p class="mt-2 flex items-baseline gap-2 tabular-nums">
+                  <span class="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300">{{ activeSuppliers.length }}</span>
+                  <span class="text-gray-500 dark:text-gray-400">of {{ suppliers.length }} total</span>
+                </p>
+                <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full bg-emerald-500 transition-all" :style="{ width: (suppliers.length ? Math.round(activeSuppliers.length / suppliers.length * 100) : 0) + '%' }"></div>
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Suppliers marked active are counted.</p>
+              </section>
+              <p v-if="suppliers.length - activeSuppliers.length" class="text-xs text-gray-500 dark:text-gray-400 px-1">{{ suppliers.length - activeSuppliers.length }} inactive supplier(s) are not counted.</p>
+            </template>
+
+            <!-- Card: Open / Overdue orders -->
+            <template v-else-if="calcView.kind === 'card' && (calcView.key === 'open' || calcView.key === 'overdue')">
+              <section class="border-l-4 pl-4 pr-3 py-3 bg-gray-50 dark:bg-gray-900/30" :class="calcView.key === 'overdue' && calcOrderRows.length ? 'border-red-500' : 'border-sky-400'">
+                <p class="calc-label"><span aria-hidden="true">{{ calcView.key === 'overdue' ? '⚠️' : '📋' }}</span> {{ calcView.key === 'open' ? 'Open orders' : 'Overdue deliveries' }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <template v-if="calcView.key === 'open'">Open = orders with status Ordered or Partially Received.</template>
+                  <template v-else>Overdue = open orders whose expected date is before today ({{ formatShortDate(today) }}).</template>
+                </p>
+                <p v-if="!calcOrderRows.length" class="mt-3 text-gray-500 dark:text-gray-400">None right now. 🎉</p>
+                <ul v-else class="mt-3 space-y-1.5">
+                  <li v-for="o in calcOrderRows" :key="o.po_id" class="flex items-center justify-between gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2">
+                    <div class="min-w-0">
+                      <p class="font-semibold truncate">{{ o.po_number }}</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ supplierOf(o)?.supplier_name || 'Supplier' }}</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                      <p class="text-xs tabular-nums" :class="overdue(o) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'">{{ o.expected_date ? 'Expected ' + formatShortDate(o.expected_date) : 'No date' }}</p>
+                      <span v-if="overdue(o)" class="inline-block mt-0.5 px-1.5 py-0.5 text-[11px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 rounded-full">{{ -daysFrom(o.expected_date, today) }}d late</span>
+                    </div>
+                  </li>
+                </ul>
+                <div class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 flex items-baseline justify-between">
+                  <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Count</span>
+                  <span class="text-2xl font-extrabold tabular-nums" :class="calcView.key === 'overdue' && calcOrderRows.length ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'">{{ calcOrderRows.length }}</span>
+                </div>
+              </section>
+            </template>
+
+            <!-- Card: Value still to arrive -->
+            <template v-else-if="calcView.kind === 'card' && calcView.key === 'arrive'">
+              <p class="text-xs text-gray-500 dark:text-gray-400 px-1">Only the part not yet delivered: (ordered − received) × unit cost, for every open order.</p>
+              <p v-if="!arriveRows.length" class="text-gray-500 dark:text-gray-400 px-1">No open orders.</p>
+              <section v-for="r in arriveRows" :key="r.po.po_id" class="border-l-4 border-sky-400 bg-gray-50 dark:bg-gray-900/30 pl-4 pr-3 py-3">
+                <p class="font-semibold">{{ r.po.po_number }} <span class="font-normal text-xs text-gray-500 dark:text-gray-400">· {{ supplierOf(r.po)?.supplier_name || 'Supplier' }}</span></p>
+                <ul class="mt-2 space-y-1.5">
+                  <li v-for="(l, idx) in r.lines" :key="idx" class="tabular-nums">
+                    <div class="flex justify-between gap-3">
+                      <span class="font-medium truncate">{{ l.name }}</span>
+                      <span class="font-semibold">{{ formatPeso(l.amount) }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">({{ l.ordered }} − {{ l.received }}) = {{ l.left }} {{ l.unit }} × {{ formatPeso(l.cost) }}</p>
+                  </li>
+                </ul>
+                <p class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs tabular-nums flex justify-between"><span class="text-gray-500 dark:text-gray-400">Subtotal</span><span class="font-semibold text-sm">{{ formatPeso(r.subtotal) }}</span></p>
+              </section>
+              <section class="border-l-4 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10 pl-4 pr-3 py-3">
+                <p v-if="arriveRows.length > 1" class="text-xs text-gray-500 dark:text-gray-400 tabular-nums break-words">{{ arriveRows.map((r) => formatPeso(r.subtotal)).join(' + ') }}</p>
+                <div class="flex items-baseline justify-between">
+                  <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Total still to arrive</span>
+                  <span class="text-2xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{{ formatPeso(arriveTotal) }}</span>
+                </div>
+              </section>
+            </template>
+
+            <!-- Supplier row -->
+            <template v-else-if="calcView.kind === 'supplier' && supplierCalc">
+              <!-- Received value -->
+              <section class="border-l-4 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10 pl-4 pr-3 py-3">
+                <p class="calc-label"><span aria-hidden="true">📦</span> Received value</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Delivered quantity × unit cost, on every order that is not Draft or Cancelled.</p>
+                <p v-if="!supplierCalc.orders.length" class="mt-2 text-gray-500 dark:text-gray-400">No orders yet.</p>
+                <div v-for="r in supplierCalc.orders" :key="r.po.po_id" class="mt-3">
+                  <p class="font-semibold">{{ r.po.po_number }} <span class="text-xs font-normal px-1.5 py-0.5 rounded-full" :class="statusOf(r.po.status).cls">{{ statusOf(r.po.status).label }}</span></p>
+                  <ul class="mt-1 space-y-1">
+                    <li v-for="(l, idx) in r.lines" :key="idx" class="tabular-nums">
+                      <div class="flex justify-between gap-3"><span class="truncate">{{ l.name }}</span><span class="font-semibold">{{ formatPeso(l.amount) }}</span></div>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">{{ l.received }} {{ l.unit }} × {{ formatPeso(l.cost) }}</p>
+                    </li>
+                  </ul>
+                  <p v-if="!r.lines.length" class="text-xs text-gray-400">Nothing delivered yet.</p>
+                </div>
+                <div class="mt-3 pt-2 border-t border-emerald-200 dark:border-emerald-800 flex items-baseline justify-between">
+                  <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Total received</span>
+                  <span class="text-2xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">{{ formatPeso(supplierCalc.spent) }}</span>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">Orders counted = {{ supplierCalc.orders.length }} · Still open = {{ supplierCalc.open }}</p>
+              </section>
+
+              <!-- Reliability -->
+              <section class="border-l-4 pl-4 pr-3 py-3 bg-gray-50 dark:bg-gray-900/30" :class="calcRating ? calcRatingBorder : 'border-gray-300 dark:border-gray-600'">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="calc-label"><span aria-hidden="true">⭐</span> Reliability</p>
+                  <span class="px-2 py-0.5 text-xs font-bold rounded-full" :class="calcRating ? RATING_STYLE[calcRating] : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'">{{ calcRating || 'Not enough orders yet' }}</span>
+                </div>
+
+                <!-- Progress toward a fair rating -->
+                <div class="mt-3">
+                  <div class="flex justify-between text-xs tabular-nums text-gray-600 dark:text-gray-300">
+                    <span>Completed orders</span>
+                    <span><strong>{{ supplierCalc.completed }}</strong> of {{ SCORECARD_MIN_ORDERS }} needed</span>
+                  </div>
+                  <div class="mt-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full bg-sky-500 transition-all" :style="{ width: Math.min(100, Math.round(supplierCalc.completed / SCORECARD_MIN_ORDERS * 100)) + '%' }"></div>
+                  </div>
+                  <p v-if="supplierCalc.completed < SCORECARD_MIN_ORDERS" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ SCORECARD_MIN_ORDERS - supplierCalc.completed }} more fully received order{{ SCORECARD_MIN_ORDERS - supplierCalc.completed === 1 ? '' : 's' }} needed before a rating is shown.
+                  </p>
+                </div>
+
+                <p v-if="!supplierCalc.completed" class="mt-3 text-gray-500 dark:text-gray-400">No completed (fully received) orders yet, so nothing to rate.</p>
+                <template v-else>
+                  <div v-for="m in calcMetrics" :key="m.key" class="mt-4">
+                    <div class="flex justify-between items-baseline text-xs tabular-nums text-gray-600 dark:text-gray-300">
+                      <span>{{ m.label }} <span class="text-gray-400 dark:text-gray-500">({{ m.detail }})</span></span>
+                      <strong class="text-base" :class="m.text">{{ m.pct === null ? '—' : m.pct + '%' }}</strong>
+                    </div>
+                    <div class="relative mt-1 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full">
+                      <div v-if="m.pct !== null" class="h-full rounded-full transition-all" :class="m.bar" :style="{ width: Math.min(100, m.pct) + '%' }"></div>
+                      <span class="absolute -top-1 -bottom-1 w-0.5 bg-amber-500" :style="{ left: m.fair + '%' }" title="Fair"></span>
+                      <span class="absolute -top-1 -bottom-1 w-0.5 bg-emerald-600" :style="{ left: m.reliable + '%' }" title="Reliable"></span>
+                    </div>
+                    <div class="relative h-4 mt-1 text-[11px] tabular-nums">
+                      <span class="absolute -translate-x-1/2 text-amber-600 dark:text-amber-400" :style="{ left: m.fair + '%' }">{{ m.fair }}%</span>
+                      <span class="absolute -translate-x-1/2 text-emerald-600 dark:text-emerald-400" :style="{ left: m.reliable + '%' }">{{ m.reliable }}%</span>
+                    </div>
+                  </div>
+                  <ul class="mt-2 space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <li><span aria-hidden="true">🟢</span> Reliable: 90%+ on time and 95%+ filled</li>
+                    <li><span aria-hidden="true">🟠</span> Fair: 70%+ on time and 85%+ filled</li>
+                    <li><span aria-hidden="true">🔴</span> Needs attention: anything lower</li>
+                  </ul>
+                </template>
+              </section>
             </template>
           </div>
-        </div>
 
-        <div class="flex justify-end mt-5">
-          <button type="button" @click="closeCalc" :class="btnGhost">Close</button>
+          <!-- Footer / quick actions -->
+          <div class="flex flex-wrap items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" @click="closeCalc" :class="btnGhost" class="mr-auto">Close</button>
+            <template v-if="calcView.kind === 'supplier' && supplierCalc">
+              <button type="button" @click="calcEditSupplier" :class="btnGhost">Edit supplier</button>
+              <button type="button" @click="calcNewOrder" :disabled="!supplierCalc.supplier.is_active" :class="btnPrimary">New order</button>
+            </template>
+            <button v-else-if="calcView.kind === 'card' && calcView.key !== 'active'" type="button" @click="calcGoOrders" :class="btnPrimary">View purchase orders</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- PURCHASE ORDER DETAIL -->
     <div v-if="detail" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -614,7 +700,7 @@
 import { logoutUser } from '../services/authService'
 import { resetNotifications } from '../composables/useNotifications'
 import logoUrl from '../Assets/logofinal.png'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import NotificationBell from '../Components/NotificationBell.vue'
 import { useSidebarState } from '../composables/useSidebarState'
 import { useChatUnread } from '../composables/useChatUnread'
@@ -712,6 +798,17 @@ const calcView = ref(null) // { kind: 'card', key } | { kind: 'supplier', id }
 const openCardCalc = (key) => { calcView.value = { kind: 'card', key } }
 const openSupplierCalc = (s) => { calcView.value = { kind: 'supplier', id: s.supplier_id } }
 const closeCalc = () => { calcView.value = null }
+// Esc closes the popup.
+function onCalcKey(e) { if (e.key === 'Escape' && calcView.value) closeCalc() }
+watch(calcView, (v) => {
+  if (v) window.addEventListener('keydown', onCalcKey)
+  else window.removeEventListener('keydown', onCalcKey)
+})
+onUnmounted(() => window.removeEventListener('keydown', onCalcKey))
+// Quick actions from inside the popup.
+const calcEditSupplier = () => { const sp = supplierCalc.value?.supplier; closeCalc(); if (sp) openSupplierModal(sp) }
+const calcNewOrder = () => { const sp = supplierCalc.value?.supplier; closeCalc(); if (sp) openPoModal(null, sp.supplier_id) }
+const calcGoOrders = () => { closeCalc(); tab.value = 'orders' }
 const num = (v) => Number(v) || 0
 const calcTitle = computed(() => {
   const v = calcView.value
@@ -760,6 +857,23 @@ const supplierCalc = computed(() => {
     onTimePct: dated ? Math.round((onTime / dated) * 100) : null,
     fillPct: ordered ? Math.round((received / ordered) * 100) : null,
   }
+})
+
+// Reliability bars inside the supplier popup (markers = Fair / Reliable cut-offs).
+const calcRating = computed(() => (supplierCalc.value ? scoreOf(supplierCalc.value.supplier)?.rating || null : null))
+const calcRatingBorder = computed(() => ({ Reliable: 'border-emerald-500', Fair: 'border-amber-500', 'Needs attention': 'border-red-500' }[calcRating.value] || 'border-gray-300'))
+const calcMetrics = computed(() => {
+  const c = supplierCalc.value
+  if (!c) return []
+  const level = (pct, fair, reliable) => (pct === null ? 'none' : pct >= reliable ? 'good' : pct >= fair ? 'fair' : 'bad')
+  const BAR = { good: 'bg-emerald-500', fair: 'bg-amber-500', bad: 'bg-red-500', none: 'bg-gray-300' }
+  const TXT = { good: 'text-emerald-600 dark:text-emerald-400', fair: 'text-amber-600 dark:text-amber-400', bad: 'text-red-600 dark:text-red-400', none: 'text-gray-500 dark:text-gray-400' }
+  const a = level(c.onTimePct, 70, 90)
+  const b = level(c.fillPct, 85, 95)
+  return [
+    { key: 'ontime', label: 'On time', detail: `${c.onTime} of ${c.dated} orders on or before expected date`, pct: c.onTimePct, fair: 70, reliable: 90, bar: BAR[a], text: TXT[a] },
+    { key: 'fill', label: 'Filled', detail: `${c.received} of ${c.ordered} ordered qty`, pct: c.fillPct, fair: 85, reliable: 95, bar: BAR[b], text: TXT[b] },
+  ]
 })
 
 // Reliability rating per supplier (from completed orders).
@@ -1233,3 +1347,32 @@ const allNavItems = [
 // Admin / Owner-Manager only (route + onMounted already enforce this).
 const navItems = computed(() => allNavItems)
 </script>
+
+<style scoped>
+.calc-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+:global(.dark) .calc-label { color: #9ca3af; }
+
+/* Computation popup: fade backdrop + scale panel (bottom sheet on mobile) */
+.calc-modal-enter-active,
+.calc-modal-leave-active { transition: opacity 0.18s ease; }
+.calc-modal-enter-active .calc-panel,
+.calc-modal-leave-active .calc-panel { transition: transform 0.2s ease, opacity 0.2s ease; }
+.calc-modal-enter-from,
+.calc-modal-leave-to { opacity: 0; }
+.calc-modal-enter-from .calc-panel,
+.calc-modal-leave-to .calc-panel { opacity: 0; transform: scale(0.96) translateY(8px); }
+@media (max-width: 639px) {
+  .calc-modal-enter-from .calc-panel,
+  .calc-modal-leave-to .calc-panel { transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calc-modal-enter-active, .calc-modal-leave-active,
+  .calc-modal-enter-active .calc-panel, .calc-modal-leave-active .calc-panel { transition: none; }
+}
+</style>
