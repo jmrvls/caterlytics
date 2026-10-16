@@ -337,89 +337,129 @@
         </div>
 
         <!-- Bookings Table — desktop / tablet -->
-        <div class="hidden xl:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-300 dark:border-gray-600 overflow-hidden">
+        <div class="hidden xl:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-gray-900 text-emerald-600 dark:text-emerald-400 uppercase text-xs tracking-wide">
+              <thead class="bg-gray-50 dark:bg-gray-900/60 text-gray-500 dark:text-gray-400 text-xs border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Client</th>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Event</th>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Location</th>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Package</th>
-                  <th class="text-left px-2 2xl:px-4 py-3 font-semibold">Staff</th>
-                  <th class="text-right px-2 2xl:px-4 py-3 font-semibold">Actions</th>
+                  <th class="text-left pl-5 pr-4 py-3 font-medium w-[15%]">Client</th>
+                  <th class="text-left px-4 py-3 font-medium w-[12%]">Event</th>
+                  <th class="text-left px-4 py-3 font-medium w-[14%]">Location</th>
+                  <th class="text-left px-4 py-3 font-medium">Package</th>
+                  <th class="text-left px-4 py-3 font-medium w-[13%]">Staff</th>
+                  <th class="text-right pl-4 pr-5 py-3 font-medium w-px whitespace-nowrap">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700/70">
                 <tr v-if="isLoading">
-                  <td colspan="6" class="text-center py-10 text-gray-400 dark:text-gray-500">Loading bookings...</td>
+                  <td colspan="6" class="text-center py-12 text-gray-400 dark:text-gray-500">Loading bookings...</td>
                 </tr>
                 <tr v-else-if="filteredBookings.length === 0">
-                  <td colspan="6" class="text-center py-10 text-gray-400 dark:text-gray-500">
+                  <td colspan="6" class="text-center py-12 text-gray-400 dark:text-gray-500">
                     {{ !hasActiveFilters ? 'No bookings yet. Click "New Booking" to create one.' : 'No bookings match your filters.' }}
                   </td>
                 </tr>
-                <tr v-for="b in filteredBookings" :key="b.booking_id" class="hover:bg-gray-50/60 dark:hover:bg-gray-700/60 align-top">
-                  <td class="px-2 2xl:px-4 py-3.5 whitespace-nowrap">
-                    <div class="font-medium text-gray-800 dark:text-gray-100 capitalize">{{ b.client_name }}</div>
-                    <a v-if="b.client_contact_number" :href="'tel:' + b.client_contact_number" class="text-xs text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">{{ b.client_contact_number }}</a>
-                    <span v-else class="text-xs text-gray-400 dark:text-gray-500">—</span>
+                <tr
+                  v-for="b in filteredBookings" :key="b.booking_id"
+                  :class="b.booking_status === 'Cancelled' ? 'bg-gray-50/70 dark:bg-gray-900/30' : 'hover:bg-gray-50/70 dark:hover:bg-gray-700/40'"
+                  class="align-top transition-colors"
+                >
+                  <!-- Client (left stripe = status at a glance) -->
+                  <td :class="['border-l-4', statusStripeClass(b.booking_status), b.booking_status === 'Cancelled' ? 'opacity-60' : '']" class="pl-5 pr-4 py-4">
+                    <div class="font-semibold text-gray-900 dark:text-gray-100 capitalize leading-tight">{{ b.client_name }}</div>
+                    <a v-if="b.client_contact_number" :href="'tel:' + b.client_contact_number" class="mt-1 inline-block text-xs text-gray-500 dark:text-gray-400 tabular-nums hover:text-emerald-600 dark:hover:text-emerald-400">{{ b.client_contact_number }}</a>
+                    <span v-else class="mt-1 inline-block text-xs text-gray-400 dark:text-gray-500">No number</span>
                   </td>
-                  <td class="px-2 2xl:px-4 py-3.5 whitespace-nowrap">
-                    <div class="text-gray-800 dark:text-gray-100">{{ formatDate(b.event_date) }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(b.event_time) }}</div>
-                    <div v-if="relativeDay(b)" :class="relativeDay(b).class" class="text-xs font-semibold mt-0.5">{{ relativeDay(b).text }}</div>
+
+                  <!-- Event date -->
+                  <td :class="b.booking_status === 'Cancelled' ? 'opacity-60' : ''" class="px-4 py-4 whitespace-nowrap">
+                    <div class="font-medium text-gray-900 dark:text-gray-100 leading-tight">{{ formatDate(b.event_date) }}</div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">{{ formatTime(b.event_time) }}</div>
+                    <span v-if="relativeDay(b)" :class="relativeDay(b).pill" class="mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold">{{ relativeDay(b).text }}</span>
                   </td>
-                  <td class="px-2 2xl:px-4 py-3.5 text-gray-600 dark:text-gray-300 max-w-[8rem] 2xl:max-w-[14rem] truncate capitalize" :title="b.event_location">{{ b.event_location }}</td>
-                  <td class="px-2 2xl:px-4 py-3.5 text-gray-600 dark:text-gray-300">
-                    <div class="whitespace-nowrap">{{ b.package_name || '—' }}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ b.guest_count }} guests</div>
-                    <div v-if="addonsFor(b.booking_id).length" class="mt-1 text-xs min-w-[11rem]">
-                      <span class="font-semibold text-emerald-600 dark:text-emerald-400">Add-ons:</span>
-                      <span v-for="(a, i) in addonsFor(b.booking_id)" :key="a.addon_id" class="text-gray-600 dark:text-gray-300">{{ i ? ', ' : ' ' }}{{ a.addon_name }} ×{{ a.quantity }}</span>
+
+                  <!-- Location: wraps to 2 lines instead of cutting off -->
+                  <td :class="b.booking_status === 'Cancelled' ? 'opacity-60' : ''" class="px-4 py-4 text-gray-700 dark:text-gray-300 capitalize" :title="b.event_location">
+                    <div class="line-clamp-2 max-w-[14rem] leading-snug">{{ b.event_location || '—' }}</div>
+                  </td>
+
+                  <!-- Package + add-ons + menu -->
+                  <td :class="b.booking_status === 'Cancelled' ? 'opacity-60' : ''" class="px-4 py-4">
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{{ b.package_name || '—' }}</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ b.guest_count }} guests</span>
                     </div>
-                    <div v-if="menuPicksFor(b.booking_id).length" class="mt-1">
-                      <button type="button" @click="toggleMenuRow(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
-                        {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `View menu (${menuPicksFor(b.booking_id).length})` }}
+
+                    <div v-if="addonsFor(b.booking_id).length || menuPicksFor(b.booking_id).length" class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <button
+                        v-if="addonsFor(b.booking_id).length"
+                        type="button" @click="toggleAddonRow(b.booking_id)"
+                        class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                      >
+                        <svg :class="expandedAddonRows.has(b.booking_id) ? 'rotate-90' : ''" class="w-3 h-3 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                        {{ addonsFor(b.booking_id).length }} add-on{{ addonsFor(b.booking_id).length === 1 ? '' : 's' }}
+                        <span class="font-medium text-gray-500 dark:text-gray-400">(+₱{{ sumAddons(addonsFor(b.booking_id)).toLocaleString('en-PH') }})</span>
                       </button>
-                      <div v-if="expandedMenuRows.has(b.booking_id)" class="mt-1.5 space-y-2 min-w-[11rem]">
-                        <div v-for="grp in groupMenuPicks(menuPicksFor(b.booking_id))" :key="grp.category">
-                          <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ grp.category }}</p>
-                          <p v-for="p in grp.items" :key="p.item_id" class="text-xs text-gray-600 dark:text-gray-300">
-                            {{ p.item_name }}
-                            <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
-                          </p>
-                        </div>
+                      <button
+                        v-if="menuPicksFor(b.booking_id).length"
+                        type="button" @click="toggleMenuRow(b.booking_id)"
+                        class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                      >
+                        <svg :class="expandedMenuRows.has(b.booking_id) ? 'rotate-90' : ''" class="w-3 h-3 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                        {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `Menu (${menuPicksFor(b.booking_id).length} dishes)` }}
+                      </button>
+                    </div>
+
+                    <div v-if="expandedAddonRows.has(b.booking_id)" class="mt-2 flex flex-wrap gap-1.5 max-w-xl">
+                      <span
+                        v-for="a in addonsFor(b.booking_id)" :key="a.addon_id"
+                        class="rounded-md bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50 px-2 py-1 text-xs text-gray-700 dark:text-gray-200"
+                      >{{ a.addon_name }} <span class="font-semibold text-emerald-700 dark:text-emerald-400">×{{ a.quantity }}</span></span>
+                    </div>
+
+                    <div v-if="expandedMenuRows.has(b.booking_id)" class="mt-2 space-y-2 max-w-xl rounded-md bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700 p-3">
+                      <div v-for="grp in groupMenuPicks(menuPicksFor(b.booking_id))" :key="grp.category">
+                        <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-0.5">{{ grp.category }}</p>
+                        <p v-for="p in grp.items" :key="p.item_id" class="text-xs text-gray-700 dark:text-gray-200">
+                          {{ p.item_name }}
+                          <span v-if="p.portion !== 'Regular'" class="ml-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">{{ p.portion }}</span>
+                        </p>
                       </div>
                     </div>
                   </td>
-                  <td class="px-2 2xl:px-4 py-3.5">
-                    <div class="flex flex-wrap gap-1 max-w-[9rem] 2xl:max-w-[12rem]">
-                      <span v-if="assignedStaffNames(b.booking_id).length === 0" class="text-xs text-gray-400 dark:text-gray-500">—</span>
-                      <span v-for="name in assignedStaffNames(b.booking_id)" :key="name" class="px-2 py-0.5 rounded-full text-[11px] font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+
+                  <!-- Staff -->
+                  <td :class="b.booking_status === 'Cancelled' ? 'opacity-60' : ''" class="px-4 py-4">
+                    <span v-if="assignedStaffNames(b.booking_id).length === 0" class="text-xs text-gray-400 dark:text-gray-500">Unassigned</span>
+                    <div v-else class="flex flex-col items-start gap-1.5">
+                      <span v-for="name in assignedStaffNames(b.booking_id)" :key="name" class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                        <span class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 text-[10px] font-bold text-gray-600 dark:text-gray-200 flex items-center justify-center">{{ (name || '?').trim().charAt(0).toUpperCase() }}</span>
                         {{ name }}
                       </span>
                     </div>
                   </td>
-                  <td class="px-2 2xl:px-4 py-3">
-                    <div class="flex items-center justify-end gap-1.5">
+
+                  <!-- Status + actions -->
+                  <td class="pl-4 pr-5 py-3.5">
+                    <div class="flex items-center justify-end gap-1">
                       <select
                         :value="b.booking_status"
                         @change="requestStatusChange(b, $event)"
-                        :class="statusBadgeClass(b.booking_status)"
-                        class="text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-none px-2 py-1.5 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        :class="statusSelectClass(b.booking_status)"
+                        class="text-xs font-semibold border rounded-full pl-3 pr-7 py-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        aria-label="Booking status"
                       >
                         <option value="Pending">Pending</option>
                         <option value="Confirmed">Confirmed</option>
                         <option value="Completed">Completed</option>
                         <option value="Cancelled">Cancelled</option>
                       </select>
-                      <button @click="openAssignModal(b)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30" title="Assign staff">
+                      <button @click="openAssignModal(b)" class="ml-1 p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Assign staff" aria-label="Assign staff">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" />
                         </svg>
                       </button>
-                      <button @click="confirmDelete(b)" class="p-1.5 rounded-none text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete booking">
+                      <button @click="confirmDelete(b)" class="p-2 rounded-md text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete booking" aria-label="Delete booking">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -431,8 +471,8 @@
             </table>
           </div>
           <div v-if="hasMoreBookings && !isLoading" class="flex justify-center py-4 border-t border-gray-100 dark:border-gray-700">
-            <button @click="loadMoreBookings" :disabled="isLoadingMore" class="px-5 py-2 rounded-none border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
-              {{ isLoadingMore ? 'Loading...' : `Load More (${bookings.length} of ${totalBookings})` }}
+            <button @click="loadMoreBookings" :disabled="isLoadingMore" class="px-5 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+              {{ isLoadingMore ? 'Loading...' : `Load more (${bookings.length} of ${totalBookings})` }}
             </button>
           </div>
         </div>
@@ -1034,6 +1074,13 @@ function toggleMenuRow(id) {
   next.has(id) ? next.delete(id) : next.add(id)
   expandedMenuRows.value = next
 }
+// Add-ons list is collapsed by default in the desktop table (can be long).
+const expandedAddonRows = ref(new Set())
+function toggleAddonRow(id) {
+  const next = new Set(expandedAddonRows.value)
+  next.has(id) ? next.delete(id) : next.add(id)
+  expandedAddonRows.value = next
+}
 // Add-ons (extras) each client attached, so staff/kitchen can see them.
 const addonsByBooking = ref({})
 function addonsFor(bookingId) {
@@ -1086,20 +1133,43 @@ const statusTabs = computed(() => {
 
 // "Today", "Tomorrow", "in 6 days" for active bookings, so the admin can see
 // what is coming up without doing date math. Hidden once a booking is done.
+const PILL_RED = 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+const PILL_AMBER = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+const PILL_GRAY = 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
 function relativeDay(b) {
   if (!b.event_date || ['Completed', 'Cancelled'].includes(b.booking_status)) return null
   const today = new Date(localToday() + 'T00:00:00')
   const event = new Date(b.event_date + 'T00:00:00')
   const days = Math.round((event - today) / 86400000)
-  if (days < 0) return { text: `${-days} day${days === -1 ? '' : 's'} overdue`, class: 'text-red-600 dark:text-red-400' }
-  if (days === 0) return { text: 'Today', class: 'text-red-600 dark:text-red-400' }
-  if (days === 1) return { text: 'Tomorrow', class: 'text-amber-600 dark:text-amber-400' }
-  if (days <= 7) return { text: `in ${days} days`, class: 'text-amber-600 dark:text-amber-400' }
-  return { text: `in ${days} days`, class: 'text-gray-400 dark:text-gray-500' }
+  if (days < 0) return { text: `${-days} day${days === -1 ? '' : 's'} overdue`, class: 'text-red-600 dark:text-red-400', pill: PILL_RED }
+  if (days === 0) return { text: 'Today', class: 'text-red-600 dark:text-red-400', pill: PILL_RED }
+  if (days === 1) return { text: 'Tomorrow', class: 'text-amber-600 dark:text-amber-400', pill: PILL_AMBER }
+  if (days <= 7) return { text: `in ${days} days`, class: 'text-amber-600 dark:text-amber-400', pill: PILL_AMBER }
+  return { text: `in ${days} days`, class: 'text-gray-400 dark:text-gray-500', pill: PILL_GRAY }
 }
 
 function countByStatus(status) {
   return statusCounts.value[status] || 0
+}
+
+// Desktop table: left stripe + filled select pill per status.
+function statusStripeClass(status) {
+  switch (status) {
+    case 'Confirmed': return 'border-l-emerald-500'
+    case 'Pending': return 'border-l-amber-400'
+    case 'Completed': return 'border-l-blue-500'
+    case 'Cancelled': return 'border-l-red-400'
+    default: return 'border-l-gray-300'
+  }
+}
+function statusSelectClass(status) {
+  switch (status) {
+    case 'Confirmed': return 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300'
+    case 'Pending': return 'bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300'
+    case 'Completed': return 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
+    case 'Cancelled': return 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300'
+    default: return 'bg-gray-50 border-gray-200 text-gray-700 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300'
+  }
 }
 
 function statusBadgeClass(status) {
