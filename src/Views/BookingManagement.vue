@@ -130,35 +130,35 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 overflow-x-hidden w-full min-w-0">
+    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 pb-24 sm:pb-8 overflow-x-hidden w-full min-w-0">
       <div class="max-w-none 2xl:max-w-[1920px] mx-auto">
 
         <div class="flex flex-col gap-3 mb-4">
           <div class="flex flex-row items-center justify-between gap-2 sm:gap-3">
-            <div class="relative flex-1 max-w-sm">
+            <div class="relative flex-1 min-w-0 sm:max-w-sm">
               <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
               </svg>
               <input
                 v-model="searchQuery"
                 type="text"
-                placeholder="Search by client name or mobile number..."
-                class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+                placeholder="Search name or mobile..."
+                class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
               />
             </div>
 
-            <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <button
                 type="button"
                 @click="openCalendar"
-                class="flex items-center justify-center gap-2 border border-emerald-600 text-emerald-700 dark:text-emerald-300 px-3 py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition whitespace-nowrap"
+                class="flex items-center justify-center gap-2 border border-emerald-600 text-emerald-700 dark:text-emerald-300 px-3 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition whitespace-nowrap"
               >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 Calendar
               </button>
-              <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
+              <button @click="openCreateModal" class="hidden sm:flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
@@ -172,7 +172,7 @@
 
           <!-- Filters: status tabs (with counts) + when -->
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
-            <div class="flex gap-1 overflow-x-auto -mx-1 px-1" role="tablist" aria-label="Filter by status">
+            <div class="flex gap-1 overflow-x-auto -mx-4 px-4 sm:-mx-1 sm:px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filter by status">
               <button
                 v-for="tab in statusTabs" :key="tab.value"
                 type="button" role="tab"
@@ -181,14 +181,14 @@
                 :class="statusFilter === tab.value
                   ? 'bg-emerald-600 text-white border-emerald-600'
                   : 'bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-500'"
-                class="flex items-center gap-1.5 px-3 py-2 border text-sm font-semibold whitespace-nowrap transition"
+                class="flex items-center gap-1.5 px-3 py-2 min-h-[40px] sm:min-h-0 border text-sm font-semibold whitespace-nowrap transition shrink-0"
               >
                 {{ tab.label }}
                 <span :class="statusFilter === tab.value ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700'" class="min-w-[20px] px-1.5 text-[11px] leading-5 text-center">{{ tab.count }}</span>
               </button>
             </div>
 
-            <div class="flex gap-1" role="tablist" aria-label="Filter by event date">
+            <div class="flex gap-1 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filter by event date">
               <button
                 v-for="w in whenOptions" :key="w.value"
                 type="button" role="tab"
@@ -197,7 +197,7 @@
                 :class="whenFilter === w.value
                   ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30'
                   : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-emerald-500'"
-                class="px-3 py-2 border text-sm font-semibold whitespace-nowrap transition"
+                class="px-3 py-2 min-h-[40px] sm:min-h-0 border text-sm font-semibold whitespace-nowrap transition shrink-0"
               >{{ w.label }}</button>
             </div>
           </div>
@@ -240,38 +240,47 @@
         <!-- Bookings — mobile card list (phone-friendly, replaces the table below md) -->
         <div class="xl:hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           <div v-if="isLoading" class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500 text-sm">Loading bookings...</div>
-          <div v-else-if="filteredBookings.length === 0" class="col-span-full text-center py-10 text-gray-400 dark:text-gray-500 text-sm">
-            {{ !hasActiveFilters ? 'No bookings yet. Tap "New Booking" to create one.' : 'No bookings match your filters.' }}
+          <div v-else-if="filteredBookings.length === 0" class="col-span-full text-center py-12 px-4">
+            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ !hasActiveFilters ? 'No bookings yet.' : 'No bookings match your filters.' }}</p>
+            <button v-if="!hasActiveFilters" @click="openCreateModal" class="mt-4 px-5 min-h-[44px] bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition">New Booking</button>
           </div>
+
+          <!-- Summary line -->
+          <p v-if="!isLoading && filteredBookings.length" class="col-span-full text-xs text-gray-500 dark:text-gray-400 px-1">
+            {{ totalBookings }} booking{{ totalBookings === 1 ? '' : 's' }}
+            <template v-if="todayCount"> · <span class="font-semibold text-red-600 dark:text-red-400">{{ todayCount }} today</span></template>
+            <template v-if="countByStatus('Pending')"> · <span class="font-semibold text-amber-600 dark:text-amber-400">{{ countByStatus('Pending') }} pending</span></template>
+          </p>
+
           <div
             v-for="b in filteredBookings" :key="b.booking_id"
-            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl p-4"
+            :class="[statusStripeClass(b.booking_status), b.booking_status === 'Cancelled' ? 'opacity-70' : '']"
+            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 border-l-4 rounded-xl p-3 sm:p-4"
           >
-            <div class="flex items-start justify-between gap-3 mb-2">
+            <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <p class="font-semibold text-gray-900 dark:text-gray-100 truncate capitalize">{{ b.client_name }}</p>
-                <a v-if="b.client_contact_number" :href="'tel:' + b.client_contact_number" class="block text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">{{ b.client_contact_number }}</a>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ formatDate(b.event_date) }} · {{ formatTime(b.event_time) }}</p>
-                <p v-if="relativeDay(b)" :class="relativeDay(b).class" class="text-xs font-semibold mt-0.5">{{ relativeDay(b).text }}</p>
+                <a v-if="b.client_contact_number" :href="'tel:' + b.client_contact_number" class="inline-flex items-center gap-1 py-1 -my-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  {{ b.client_contact_number }}
+                </a>
               </div>
-              <span :class="statusBadgeClass(b.booking_status)" class="shrink-0 text-xs font-semibold leading-5">
-                {{ b.booking_status }}
-              </span>
+              <span :class="statusSelectClass(b.booking_status)" class="shrink-0 border px-2.5 py-1 rounded-full text-xs font-semibold leading-none">{{ b.booking_status }}</span>
             </div>
 
-            <div class="text-sm text-gray-600 dark:text-gray-300 space-y-1 mb-3">
-              <p class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <span class="truncate capitalize">{{ b.event_location }}</span>
-              </p>
-              <p class="flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-4a4 4 0 10-4-4m4 4a4 4 0 01-4-4" /></svg>
-                {{ b.guest_count }} guests · {{ b.package_name || 'No package' }}
-              </p>
+            <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+              <span>{{ formatDate(b.event_date) }} · {{ formatTime(b.event_time) }}</span>
+              <span v-if="relativeDay(b)" :class="relativeDay(b).pill" class="px-2 py-0.5 rounded-full font-semibold">{{ relativeDay(b).text }}</span>
             </div>
 
-            <div v-if="menuPicksFor(b.booking_id).length" class="mb-2.5">
-              <button type="button" @click="toggleMenuRow(b.booking_id)" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
+              <span class="flex items-center gap-1.5 min-w-0"><svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span class="truncate capitalize">{{ b.event_location }}</span></span>
+              <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-4a4 4 0 10-4-4m4 4a4 4 0 01-4-4" /></svg>{{ b.guest_count }} guests · {{ b.package_name || 'No package' }}</span>
+            </div>
+
+            <div v-if="menuPicksFor(b.booking_id).length" class="mt-2">
+              <button type="button" @click="toggleMenuRow(b.booking_id)" class="py-1.5 -my-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 {{ expandedMenuRows.has(b.booking_id) ? 'Hide menu' : `View menu (${menuPicksFor(b.booking_id).length})` }}
               </button>
               <div v-if="expandedMenuRows.has(b.booking_id)" class="mt-1.5 space-y-2">
@@ -285,54 +294,59 @@
               </div>
             </div>
 
-            <div v-if="addonsFor(b.booking_id).length" class="mb-2.5 text-xs text-gray-600 dark:text-gray-300">
+            <div v-if="addonsFor(b.booking_id).length" class="mt-2 text-xs text-gray-600 dark:text-gray-300">
               <p class="font-semibold text-emerald-600 dark:text-emerald-400">Add-ons (+₱{{ sumAddons(addonsFor(b.booking_id)).toLocaleString('en-PH') }})</p>
               <p v-for="a in addonsFor(b.booking_id)" :key="a.addon_id">{{ a.addon_name }} ×{{ a.quantity }}</p>
             </div>
 
-            <div class="flex items-center gap-1.5 flex-wrap mb-2.5">
-              <span v-if="assignedStaffNames(b.booking_id).length === 0" class="text-xs text-gray-400 dark:text-gray-500">No staff assigned</span>
-              <span v-for="name in assignedStaffNames(b.booking_id)" :key="name" class="px-2 py-0.5 rounded-full text-[11px] font-semibold text-gray-900 dark:text-gray-100">
+            <div class="mt-2 flex items-center gap-1.5 flex-wrap">
+              <span v-if="assignedStaffNames(b.booking_id).length === 0 && b.booking_status === 'Confirmed'" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-[11px] font-semibold text-amber-700 dark:text-amber-300">⚠ No staff assigned yet</span>
+              <span v-else-if="assignedStaffNames(b.booking_id).length === 0" class="text-xs text-gray-400 dark:text-gray-500">No staff assigned</span>
+              <span v-for="name in assignedStaffNames(b.booking_id)" :key="name" class="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-[11px] font-semibold text-gray-900 dark:text-gray-100">
                 {{ name }}
               </span>
             </div>
 
-            <div class="flex items-center gap-2">
-              <select
-                :value="b.booking_status"
-                @change="requestStatusChange(b, $event)"
-                class="flex-1 text-sm border border-gray-200 dark:border-gray-700 rounded-none px-3 py-2.5 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
-              >
-                <option value="Pending">Pending</option>
-                <option value="Confirmed">Confirmed</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
+            <div class="mt-3">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Set status</p>
+              <div class="grid grid-cols-4 gap-1" role="group" aria-label="Set booking status">
+                <button
+                  v-for="st in ['Pending', 'Confirmed', 'Completed', 'Cancelled']" :key="st"
+                  type="button"
+                  :aria-pressed="b.booking_status === st"
+                  @click="requestStatusChange(b, { target: { value: st } })"
+                  :class="b.booking_status === st ? statusSelectClass(st) : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-700'"
+                  class="min-h-[40px] border text-[11px] font-semibold transition"
+                >{{ st }}</button>
+              </div>
+            </div>
+
+            <div class="mt-2 grid grid-cols-2 gap-2">
               <button
                 @click="openAssignModal(b)"
-                class="w-11 h-11 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 active:bg-purple-50 dark:active:bg-purple-900/30 active:text-purple-600"
-                title="Assign staff"
+                class="min-h-[44px] flex items-center justify-center gap-2 border border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-purple-50 dark:active:bg-purple-900/30"
               >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" />
-                </svg>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4-4 4 4 0 004 4z" /></svg>
+                Assign staff
               </button>
               <button
                 @click="confirmDelete(b)"
-                class="w-11 h-11 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 active:bg-red-50 dark:active:bg-red-900/30 active:text-red-600"
-                title="Delete booking"
+                class="min-h-[44px] flex items-center justify-center gap-2 border border-red-200 dark:border-red-900 text-sm font-semibold text-red-600 dark:text-red-400 active:bg-red-50 dark:active:bg-red-900/30"
               >
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Delete
               </button>
             </div>
           </div>
 
-          <div v-if="hasMoreBookings && !isLoading" class="col-span-full flex justify-center pt-1">
-            <button @click="loadMoreBookings" :disabled="isLoadingMore" class="px-5 py-2.5 rounded-none border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-gray-50 dark:active:bg-gray-700 disabled:opacity-50">
-              {{ isLoadingMore ? 'Loading...' : `Load More (${bookings.length} of ${totalBookings})` }}
-            </button>
+          <div v-if="!isLoading && filteredBookings.length" class="col-span-full flex flex-col items-center gap-2 pt-1">
+            <p class="text-xs text-gray-500 dark:text-gray-400">Showing {{ bookings.length }} of {{ totalBookings }}</p>
+            <template v-if="hasMoreBookings">
+              <button @click="loadMoreBookings" :disabled="isLoadingMore" class="px-5 py-2.5 min-h-[44px] rounded-none border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-gray-50 dark:active:bg-gray-700 disabled:opacity-50">
+                {{ isLoadingMore ? 'Loading...' : 'Load more' }}
+              </button>
+              <div :ref="setSentinel" class="h-px w-full"></div>
+            </template>
           </div>
         </div>
 
@@ -481,8 +495,14 @@
     </main>
 
     <!-- ============ NEW BOOKING MODAL ============ -->
-    <div v-if="showCreateModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+    <button @click="openCreateModal" aria-label="New booking"
+      class="sm:hidden fixed bottom-5 right-5 z-30 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg active:bg-emerald-700 flex items-center justify-center print:hidden">
+      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" /></svg>
+    </button>
+
+    <div v-if="showCreateModal" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-lg p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">New Booking</h3>
 
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -588,11 +608,11 @@
             <p v-if="staffConflictWarning" class="text-xs text-amber-600 dark:text-amber-400 mt-2">{{ staffConflictWarning }}</p>
           </div>
 
-          <div class="flex gap-3 pt-2">
-            <button type="button" @click="closeCreateModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <div class="flex gap-3 sm:pt-2 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+            <button type="button" @click="closeCreateModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
               Cancel
             </button>
-            <button type="submit" :disabled="isCreating" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+            <button type="submit" :disabled="isCreating" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
               {{ isCreating ? 'Saving...' : 'Create Booking' }}
             </button>
           </div>
@@ -613,10 +633,10 @@
           back into inventory.
         </p>
         <div class="flex gap-3">
-          <button @click="revertRequest = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button @click="revertRequest = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Keep as is
           </button>
-          <button @click="confirmRevert" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700">
+          <button @click="confirmRevert" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700">
             Return stock
           </button>
         </div>
@@ -628,17 +648,17 @@
       <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-5xl p-4 sm:p-6 max-h-[95vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Booked Events</h3>
-          <button type="button" @click="closeCalendar" aria-label="Close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button type="button" @click="closeCalendar" aria-label="Close" class="p-2 -m-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div class="flex items-center gap-1">
-            <button type="button" @click="calendarPrev" aria-label="Previous month" class="w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&lsaquo;</button>
+            <button type="button" @click="calendarPrev" aria-label="Previous month" class="w-11 h-11 sm:w-9 sm:h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&lsaquo;</button>
             <p class="min-w-[9rem] text-center text-sm font-bold text-gray-800 dark:text-gray-100">{{ calendarMonthLabel }}</p>
-            <button type="button" @click="calendarNext" aria-label="Next month" class="w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&rsaquo;</button>
-            <button type="button" @click="calendarToday" class="ml-2 px-3 h-9 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-emerald-500">Today</button>
+            <button type="button" @click="calendarNext" aria-label="Next month" class="w-11 h-11 sm:w-9 sm:h-9 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-500">&rsaquo;</button>
+            <button type="button" @click="calendarToday" class="ml-2 px-3 h-11 sm:h-9 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-emerald-500">Today</button>
           </div>
           <div class="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-amber-500"></span>Pending</span>
@@ -713,10 +733,10 @@
           This will permanently remove the booking for <span class="font-semibold text-gray-700 dark:text-gray-200">{{ bookingToDelete.client_name }}</span> on {{ formatDate(bookingToDelete.event_date) }}.
         </p>
         <div class="flex gap-3">
-          <button @click="bookingToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button @click="bookingToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button @click="handleDelete" :disabled="isDeleting" class="flex-1 bg-red-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
+          <button @click="handleDelete" :disabled="isDeleting" class="flex-1 bg-red-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
             {{ isDeleting ? 'Deleting...' : 'Delete' }}
           </button>
         </div>
@@ -724,8 +744,9 @@
     </div>
 
     <!-- ============ ASSIGN STAFF MODAL ============ -->
-    <div v-if="assignModalBooking" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+    <div v-if="assignModalBooking" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-md p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Assign Staff</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
           {{ assignModalBooking.client_name }} — {{ formatDate(assignModalBooking.event_date) }}
@@ -759,11 +780,11 @@
           </label>
         </div>
 
-        <div class="flex gap-3 pt-2">
-          <button type="button" @click="closeAssignModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+        <div class="flex gap-3 sm:pt-2 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+          <button type="button" @click="closeAssignModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button type="button" @click="handleSaveAssignment" :disabled="isSavingAssignment" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+          <button type="button" @click="handleSaveAssignment" :disabled="isSavingAssignment" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
             {{ isSavingAssignment ? 'Saving...' : 'Save' }}
           </button>
         </div>
@@ -1120,6 +1141,20 @@ async function loadAssignedStaffFor(rows) {
 // Filtering/search happen in the query (see getBookingsPage), so the loaded
 // rows are already exactly what should be shown.
 const filteredBookings = computed(() => bookings.value)
+const todayCount = computed(() => bookings.value.filter((b) => b.event_date === localToday() && !['Completed', 'Cancelled'].includes(b.booking_status)).length)
+
+// Mobile list: load the next page automatically when the user scrolls to the end.
+let sentinelObserver = null
+function setSentinel(el) {
+  if (sentinelObserver) { sentinelObserver.disconnect(); sentinelObserver = null }
+  if (el && typeof IntersectionObserver !== 'undefined') {
+    sentinelObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreBookings.value && !isLoadingMore.value && !isLoading.value) loadMoreBookings()
+    }, { rootMargin: '200px' })
+    sentinelObserver.observe(el)
+  }
+}
+onBeforeUnmount(() => { if (sentinelObserver) sentinelObserver.disconnect() })
 const hasActiveFilters = computed(() => Boolean(statusFilter.value || searchQuery.value.trim() || whenFilter.value !== 'all'))
 
 const statusTabs = computed(() => {

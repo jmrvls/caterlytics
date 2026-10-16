@@ -130,11 +130,11 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 overflow-x-hidden w-full min-w-0">
+    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 pb-24 sm:pb-8 overflow-x-hidden w-full min-w-0">
       <div class="max-w-none 2xl:max-w-[1920px] mx-auto">
 
         <div class="flex flex-row items-center justify-between gap-2 sm:gap-3 mb-4">
-          <div class="relative flex-1 max-w-sm">
+          <div class="relative flex-1 min-w-0 sm:max-w-sm">
             <svg class="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
             </svg>
@@ -142,18 +142,18 @@
               v-model="searchQuery"
               type="text"
               placeholder="Search packages..."
-              class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+              class="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
             />
           </div>
 
-          <div class="flex items-center gap-3 flex-shrink-0">
-            <button @click="openAddonsModal" class="flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
+          <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <button @click="openAddonsModal" class="flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-3 py-2.5 min-h-[44px] sm:min-h-0 sm:px-4 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition whitespace-nowrap">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               Menu List
             </button>
-            <button @click="openCreateModal" class="flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
+            <button @click="openCreateModal" class="hidden sm:flex items-center justify-center gap-2 bg-emerald-600 text-white px-3 py-2.5 sm:px-4 rounded-none font-semibold text-sm hover:bg-emerald-700 transition whitespace-nowrap min-w-[172px]">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
@@ -166,12 +166,12 @@
         </div>
 
         <!-- Category filter chips -->
-        <div v-if="packageTypes.length > 1" class="flex flex-wrap items-center gap-2 mb-5">
+        <div v-if="packageTypes.length > 1" class="-mx-4 px-4 sm:mx-0 sm:px-0 flex flex-nowrap sm:flex-wrap items-center gap-2 mb-5 overflow-x-auto sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             @click="typeFilter = 'All'"
             :class="typeFilter === 'All' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
-            class="px-3.5 py-1.5 rounded-full border text-sm font-semibold transition"
+            class="shrink-0 whitespace-nowrap px-3.5 py-1.5 min-h-[36px] sm:min-h-0 rounded-full border text-sm font-semibold transition"
           >All <span class="opacity-70 font-medium">{{ packages.length }}</span></button>
           <button
             v-for="t in packageTypes"
@@ -179,7 +179,7 @@
             type="button"
             @click="typeFilter = t"
             :class="typeFilter === t ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'"
-            class="px-3.5 py-1.5 rounded-full border text-sm font-semibold transition"
+            class="shrink-0 whitespace-nowrap px-3.5 py-1.5 min-h-[36px] sm:min-h-0 rounded-full border text-sm font-semibold transition"
           >{{ t }} <span class="opacity-70 font-medium">{{ typeCounts[t] }}</span></button>
         </div>
 
@@ -217,14 +217,15 @@
               v-if="pkg.image_url"
               type="button"
               @click="lightboxUrl = pkg.image_url"
-              class="group relative block h-44 w-full overflow-hidden bg-gray-100 dark:bg-gray-900"
+              class="group relative block h-32 sm:h-44 w-full overflow-hidden bg-gray-100 dark:bg-gray-900"
               title="Click to view full photo"
             >
               <img :src="pkg.image_url" :alt="pkg.package_name" class="w-full h-full object-cover" />
-              <span class="absolute bottom-2 right-2 bg-black/60 text-white text-[11px] font-medium px-2 py-1 opacity-0 group-hover:opacity-100 transition">View full photo</span>
+              <span class="hidden sm:block absolute bottom-2 right-2 bg-black/60 text-white text-[11px] font-medium px-2 py-1 opacity-0 group-hover:opacity-100 transition">View full photo</span>
+              <span class="sm:hidden absolute bottom-2 right-2 bg-black/60 text-white text-[11px] font-medium px-2 py-1">Tap to view</span>
             </button>
 
-            <div class="p-5 flex flex-col flex-1">
+            <div class="p-4 sm:p-5 flex flex-col flex-1">
               <!-- Name + price -->
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -271,14 +272,15 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-3 flex items-center gap-2">
-                <button @click="openEditModal(pkg)" class="flex-1 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 py-2 transition">Edit</button>
-                <button @click="openMenuModal(pkg)" class="flex-1 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Menu</button>
-                <button @click="openIngredientsModal(pkg)" class="flex-1 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Ingredients</button>
-                <button @click="confirmDelete(pkg)" class="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition" title="Delete package">
+              <div class="mt-3 flex flex-wrap sm:flex-nowrap items-center gap-2">
+                <button @click="openEditModal(pkg)" class="flex-1 basis-[28%] sm:basis-0 min-h-[44px] sm:min-h-0 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 py-2 transition">Edit</button>
+                <button @click="openMenuModal(pkg)" class="flex-1 basis-[28%] sm:basis-0 min-h-[44px] sm:min-h-0 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Menu</button>
+                <button @click="openIngredientsModal(pkg)" class="flex-1 basis-[28%] sm:basis-0 min-h-[44px] sm:min-h-0 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 py-2 transition">Ingredients</button>
+                <button @click="confirmDelete(pkg)" class="order-last w-full sm:w-auto min-h-[44px] sm:min-h-0 flex items-center justify-center gap-2 p-2 text-sm font-semibold border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 sm:border-0 sm:font-normal sm:text-gray-400 sm:dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition" title="Delete package">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
+                  <span class="sm:hidden">Delete package</span>
                 </button>
               </div>
             </div>
@@ -288,8 +290,8 @@
         </div>
 
         <!-- Full menu popup (cards keep a fixed height) -->
-        <div v-if="fullMenuPkg" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @mousedown.self="fullMenuPkg = null">
-          <div class="bg-white dark:bg-gray-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div v-if="fullMenuPkg" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4" @mousedown.self="fullMenuPkg = null">
+          <div class="bg-white dark:bg-gray-800 w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto shadow-xl rounded-t-2xl sm:rounded-none">
             <div class="flex items-start justify-between gap-4 p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800">
               <div class="min-w-0">
                 <p v-if="fullMenuPkg.package_type" class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">{{ fullMenuPkg.package_type }}</p>
@@ -329,8 +331,14 @@
     </main>
 
     <!-- ============ MANAGE MENU MODAL (main module) ============ -->
-    <div v-if="showMenuModal" @mousedown.self="closeMenuModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+    <button @click="openCreateModal" aria-label="New package"
+      class="sm:hidden fixed bottom-5 right-5 z-30 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg active:bg-emerald-700 flex items-center justify-center print:hidden">
+      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" /></svg>
+    </button>
+
+    <div v-if="showMenuModal" @mousedown.self="closeMenuModal" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Menu — {{ menuPackage?.package_name }}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Set which menu items are offered in this package, per category, and how many the client may pick from each.
@@ -387,7 +395,7 @@
                 v-model="newItemName[cat]"
                 @keyup.enter.prevent="handleAddMenuItem(cat)"
                 :placeholder="`New ${cat.toLowerCase()} item...`"
-                class="flex-1 p-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+                class="flex-1 p-2 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
               />
               <button type="button" @click="handleAddMenuItem(cat)" class="px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-none hover:bg-gray-200 dark:hover:bg-gray-600 flex-shrink-0">
                 Add
@@ -396,11 +404,11 @@
           </div>
         </div>
 
-        <div class="flex gap-3 pt-6">
-          <button type="button" @click="closeMenuModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+        <div class="flex gap-3 sm:pt-6 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+          <button type="button" @click="closeMenuModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button type="button" @click="handleSaveMenu" :disabled="isSavingMenu" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+          <button type="button" @click="handleSaveMenu" :disabled="isSavingMenu" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
             {{ isSavingMenu ? 'Saving...' : 'Save Menu' }}
           </button>
         </div>
@@ -408,8 +416,9 @@
     </div>
 
     <!-- ============ MANAGE INGREDIENTS MODAL ============ -->
-    <div v-if="showIngredientsModal" @mousedown.self="closeIngredientsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+    <div v-if="showIngredientsModal" @mousedown.self="closeIngredientsModal" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-lg p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Ingredients — {{ ingredientsPackage?.package_name }}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Set how much of each inventory item this package uses <span class="font-semibold">per guest</span>. Stock is auto-deducted using this once a booking is confirmed.
@@ -431,7 +440,7 @@
           <div v-for="(row, index) in ingredientRows" :key="row.key" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <select
               v-model.number="row.item_id"
-              class="w-full sm:flex-1 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+              class="w-full sm:flex-1 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
             >
               <option :value="null" disabled>Select item...</option>
               <option v-for="item in inventoryItems" :key="item.item_id" :value="item.item_id">
@@ -446,7 +455,7 @@
                 :value="getDisplayQty(row)"
                 @input="setDisplayQty(row, $event.target.value)"
                 :placeholder="`Qty / guest (${rowDisplayUnit(row).label})`"
-                class="flex-1 sm:w-36 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+                class="flex-1 sm:w-36 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
               />
               <span class="text-xs text-gray-400 dark:text-gray-500 w-8 shrink-0">{{ rowDisplayUnit(row).label }}</span>
               <button type="button" @click="removeIngredientRow(index)" class="p-2.5 sm:p-2 rounded-none text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex-shrink-0" title="Remove">
@@ -470,11 +479,11 @@
           </button>
         </div>
 
-        <div class="flex gap-3 pt-6">
-          <button type="button" @click="closeIngredientsModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+        <div class="flex gap-3 sm:pt-6 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+          <button type="button" @click="closeIngredientsModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button type="button" @click="handleSaveIngredients" :disabled="isSavingIngredients" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+          <button type="button" @click="handleSaveIngredients" :disabled="isSavingIngredients" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
             {{ isSavingIngredients ? 'Saving...' : 'Save Ingredients' }}
           </button>
         </div>
@@ -482,8 +491,9 @@
     </div>
 
     <!-- ============ CREATE / EDIT PACKAGE MODAL ============ -->
-    <div v-if="showFormModal" @mousedown.self="closeFormModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[92vh] overflow-y-auto">
+    <div v-if="showFormModal" @mousedown.self="closeFormModal" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-2xl p-6 max-h-[92vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">{{ isEditing ? 'Edit Package' : 'New Package' }}</h3>
 
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
@@ -555,11 +565,11 @@
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Leave blank to auto-pick from the package name. Packages are grouped by this on the list.</p>
           </div>
 
-          <div class="flex gap-3 pt-2">
-            <button type="button" @click="closeFormModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <div class="flex gap-3 sm:pt-2 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+            <button type="button" @click="closeFormModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
               Cancel
             </button>
-            <button type="submit" :disabled="isSaving" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+            <button type="submit" :disabled="isSaving" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
               {{ isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Create Package') }}
             </button>
           </div>
@@ -568,8 +578,9 @@
     </div>
 
     <!-- ============ MANAGE ADD-ONS MODAL (ala carte extras) ============ -->
-    <div v-if="showAddonsModal" @mousedown.self="closeAddonsModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+    <div v-if="showAddonsModal" @mousedown.self="closeAddonsModal" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-none shadow-xl w-full max-w-lg p-6 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
+        <div class="sm:hidden mx-auto -mt-3 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Menu List</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">
           Extra menu items or services clients can attach to any booking on top of a package (e.g. Extra Lechon, Extra Waiter, Photobooth).
@@ -587,7 +598,7 @@
           <input
             v-if="addons.length > 5"
             v-model="addonSearch" type="search" placeholder="Search menu list..."
-            class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+            class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
           />
           <!-- Category tabs -->
           <div v-if="addonCategoryTabs.length > 2" class="flex gap-2 overflow-x-auto pb-1">
@@ -656,21 +667,21 @@
           <form @submit.prevent="handleSaveAddon" class="space-y-3">
             <input
               type="text" v-model="addonForm.addon_name" placeholder="Menu item name, e.g. Extra Lechon"
-              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" required
+              class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" required
             />
             <div class="grid grid-cols-2 gap-3">
               <input
                 type="number" min="0" step="0.01" v-model.number="addonForm.price" placeholder="Price (₱)"
-                class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" required
+                class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100" required
               />
-              <select v-model="addonForm.unit_label" class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
+              <select v-model="addonForm.unit_label" class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100">
                 <option value="per booking">per booking</option>
                 <option value="per head">per head</option>
                 <option value="per piece">per piece</option>
                 <option value="per hour">per hour</option>
               </select>
             </div>
-            <textarea v-model="addonForm.description" rows="2" placeholder="Short description (optional)" class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none text-gray-900 dark:text-gray-100"></textarea>
+            <textarea v-model="addonForm.description" rows="2" placeholder="Short description (optional)" class="w-full p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-none text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none text-gray-900 dark:text-gray-100"></textarea>
             <div class="flex gap-3">
               <button v-if="editingAddonId" type="button" @click="cancelEditAddon" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
                 Cancel
@@ -682,8 +693,8 @@
           </form>
         </div>
 
-        <div class="flex gap-3 pt-6">
-          <button type="button" @click="closeAddonsModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+        <div class="flex gap-3 sm:pt-6 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 px-6 -mb-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-700 sm:static sm:mx-0 sm:px-0 sm:mb-0 sm:pb-0 sm:border-0">
+          <button type="button" @click="closeAddonsModal" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Close
           </button>
         </div>
@@ -701,13 +712,13 @@
           Used in {{ addonUsage[addonToDelete.addon_id] }} booking{{ addonUsage[addonToDelete.addon_id] === 1 ? '' : 's' }}. Hiding it instead keeps it in your list but stops clients from picking it.
         </p>
         <div class="flex gap-3 mt-3">
-          <button @click="addonToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button @click="addonToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button v-if="addonUsage[addonToDelete.addon_id] && addonToDelete.is_active" @click="hideAddonInstead" class="flex-1 bg-emerald-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-emerald-700">
+          <button v-if="addonUsage[addonToDelete.addon_id] && addonToDelete.is_active" @click="hideAddonInstead" class="flex-1 bg-emerald-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-emerald-700">
             Hide instead
           </button>
-          <button @click="handleDeleteAddon" :disabled="isDeletingAddon" class="flex-1 bg-red-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
+          <button @click="handleDeleteAddon" :disabled="isDeletingAddon" class="flex-1 bg-red-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
             {{ isDeletingAddon ? 'Deleting...' : 'Delete' }}
           </button>
         </div>
@@ -725,10 +736,10 @@
           {{ deleteError }}
         </div>
         <div class="flex gap-3 mt-3">
-          <button @click="packageToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+          <button @click="packageToDelete = null" class="flex-1 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button @click="handleDelete" :disabled="isDeleting" class="flex-1 bg-red-600 text-white py-2.5 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
+          <button @click="handleDelete" :disabled="isDeleting" class="flex-1 bg-red-600 text-white py-2.5 min-h-[44px] sm:min-h-0 rounded-none font-semibold text-sm hover:bg-red-700 disabled:opacity-50">
             {{ isDeleting ? 'Deleting...' : 'Delete' }}
           </button>
         </div>

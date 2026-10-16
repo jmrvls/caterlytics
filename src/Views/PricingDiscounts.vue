@@ -130,17 +130,17 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 overflow-x-hidden w-full min-w-0">
+    <main class="flex-1 p-4 sm:p-8 pt-20 lg:pt-8 pb-24 sm:pb-8 overflow-x-hidden w-full min-w-0">
       <div class="max-w-none 2xl:max-w-[1920px] mx-auto">
 
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div>
             <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100">Pricing &amp; Discounts</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Seasonal pricing, promo codes, and loyalty rewards for your packages.</p>
           </div>
           <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <button v-if="tab === 'seasons'" @click="openRuleModal()" :class="btnPrimary" class="whitespace-nowrap">Add Season</button>
-            <button v-if="tab === 'promos'" @click="openPromoModal()" :class="btnPrimary" class="whitespace-nowrap">New Promo Code</button>
+            <button v-if="tab === 'seasons'" @click="openRuleModal()" :class="btnPrimary" class="hidden sm:inline-block whitespace-nowrap">Add Season</button>
+            <button v-if="tab === 'promos'" @click="openPromoModal()" :class="btnPrimary" class="hidden sm:inline-block whitespace-nowrap">New Promo Code</button>
             <div class="hidden lg:block"><NotificationBell /></div>
           </div>
         </div>
@@ -160,20 +160,43 @@
             </div>
           </div>
 
-          <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto">
+          <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button v-for="t in TABS" :key="t.key" @click="tab = t.key"
               :class="tab === t.key ? 'border-emerald-600 text-emerald-700 dark:text-emerald-300 font-semibold' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100'"
-              class="px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition">{{ t.label }}</button>
+              class="flex-1 sm:flex-none px-2 sm:px-4 min-h-[44px] sm:min-h-0 sm:py-2.5 text-sm text-center border-b-2 whitespace-nowrap transition"><span class="sm:hidden">{{ t.short }}</span><span class="hidden sm:inline">{{ t.label }}</span></button>
           </div>
 
           <!-- SEASONAL PRICING -->
           <div v-if="tab === 'seasons'" :class="card">
-            <p class="p-4 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-              Raise or lower the package price for events that fall in a date range (peak season, holidays, lean months).
-              If several seasons match an event date, only one applies: the highest priority wins, then the one made for a specific package.
-            </p>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+              <button type="button" @click="helpOpen = !helpOpen" class="sm:hidden flex items-center gap-2 min-h-[32px] text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                <span>ⓘ How it works</span><span class="text-xs">{{ helpOpen ? '▲' : '▼' }}</span>
+              </button>
+              <p :class="helpOpen ? 'block mt-2' : 'hidden'" class="sm:!block sm:!mt-0 text-sm text-gray-500 dark:text-gray-400">
+                Raise or lower the package price for events that fall in a date range (peak season, holidays, lean months).
+                If several seasons match an event date, only one applies: the highest priority wins, then the one made for a specific package.
+              </p>
+            </div>
             <div v-if="!rules.length" class="p-10 text-center text-sm text-gray-400 dark:text-gray-500">No seasonal rules yet. Add one, like "Christmas peak +20%".</div>
-            <div v-else class="overflow-x-auto">
+            <div v-else>
+            <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+              <div v-for="r in rules" :key="'m' + r.rule_id" class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-gray-800 dark:text-gray-100 break-words">{{ r.rule_name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ ruleDates(r) }}</p>
+                  </div>
+                  <button @click="toggleRule(r)" :class="r.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'" class="shrink-0 px-3 py-1.5 text-xs font-semibold">{{ r.is_active ? 'Active' : 'Off' }}</button>
+                </div>
+                <p class="mt-2 text-2xl font-bold" :class="Number(r.adjustment_value) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'">{{ adjustmentLabel(r) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Applies to {{ packageName(r.package_id) }} · Priority {{ r.priority }}</p>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                  <button @click="openRuleModal(r)" class="min-h-[44px] border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700">Edit</button>
+                  <button @click="askDelete('rule', r)" class="min-h-[44px] border border-red-200 dark:border-red-900 text-sm font-semibold text-red-600 dark:text-red-400 active:bg-red-50 dark:active:bg-red-900/30">Delete</button>
+                </div>
+              </div>
+            </div>
+            <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                   <tr><th class="px-4 py-3">Season</th><th class="px-4 py-3">Dates</th><th class="px-4 py-3">Adjustment</th><th class="px-4 py-3">Applies to</th><th class="px-4 py-3">Priority</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr>
@@ -194,15 +217,43 @@
                 </tbody>
               </table>
             </div>
+            </div>
           </div>
 
           <!-- PROMO CODES -->
           <div v-if="tab === 'promos'" :class="card">
-            <p class="p-4 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
-              Clients type a code while booking. The discount comes off the subtotal (package + season + add-ons). Codes are checked by the server, so they can't be guessed or edited in the browser.
-            </p>
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+              <button type="button" @click="helpOpen = !helpOpen" class="sm:hidden flex items-center gap-2 min-h-[32px] text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                <span>ⓘ How it works</span><span class="text-xs">{{ helpOpen ? '▲' : '▼' }}</span>
+              </button>
+              <p :class="helpOpen ? 'block mt-2' : 'hidden'" class="sm:!block sm:!mt-0 text-sm text-gray-500 dark:text-gray-400">
+                Clients type a code while booking. The discount comes off the subtotal (package + season + add-ons). Codes are checked by the server, so they can't be guessed or edited in the browser.
+              </p>
+            </div>
             <div v-if="!promos.length" class="p-10 text-center text-sm text-gray-400 dark:text-gray-500">No promo codes yet.</div>
-            <div v-else class="overflow-x-auto">
+            <div v-else>
+            <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+              <div v-for="p in promos" :key="'m' + p.promo_id" class="p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-mono font-bold text-gray-800 dark:text-gray-100 break-all">{{ p.code }}</p>
+                    <p v-if="p.description" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ p.description }}</p>
+                  </div>
+                  <button @click="togglePromo(p)" :class="promoState(p).cls" class="shrink-0 px-3 py-1.5 text-xs font-semibold">{{ promoState(p).label }}</button>
+                </div>
+                <p class="mt-2 text-xl font-bold text-emerald-600 dark:text-emerald-400">{{ promoLabel(p) }}</p>
+                <dl class="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                  <div class="flex justify-between gap-3"><dt>Min. order</dt><dd class="text-gray-700 dark:text-gray-300">{{ Number(p.min_subtotal) > 0 ? formatPeso(p.min_subtotal) : '—' }}</dd></div>
+                  <div class="flex justify-between gap-3"><dt>Valid</dt><dd class="text-gray-700 dark:text-gray-300 text-right">{{ promoValidity(p) }}</dd></div>
+                  <div class="flex justify-between gap-3"><dt>Used</dt><dd class="text-gray-700 dark:text-gray-300">{{ p.times_used }}{{ p.usage_limit ? ' / ' + p.usage_limit : '' }}</dd></div>
+                </dl>
+                <div class="grid grid-cols-2 gap-2 mt-3">
+                  <button @click="openPromoModal(p)" class="min-h-[44px] border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700">Edit</button>
+                  <button @click="askDelete('promo', p)" class="min-h-[44px] border border-red-200 dark:border-red-900 text-sm font-semibold text-red-600 dark:text-red-400 active:bg-red-50 dark:active:bg-red-900/30">Delete</button>
+                </div>
+              </div>
+            </div>
+            <div class="hidden md:block overflow-x-auto">
               <table class="w-full text-sm">
                 <thead class="text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                   <tr><th class="px-4 py-3">Code</th><th class="px-4 py-3">Discount</th><th class="px-4 py-3">Min. order</th><th class="px-4 py-3">Valid</th><th class="px-4 py-3">Used</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr>
@@ -223,6 +274,7 @@
                 </tbody>
               </table>
             </div>
+            </div>
           </div>
 
           <!-- LOYALTY -->
@@ -233,8 +285,10 @@
                   <h2 class="font-bold text-gray-800 dark:text-gray-100">Loyalty program</h2>
                   <p class="text-sm text-gray-500 dark:text-gray-400">Clients earn points when a booking is marked Completed, and can spend them on later bookings.</p>
                 </div>
-                <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer whitespace-nowrap">
-                  <input type="checkbox" v-model="loyalty.is_enabled" class="w-4 h-4 accent-emerald-600" /> Enabled
+                <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer whitespace-nowrap shrink-0">
+                  <span>Enabled</span>
+                  <input type="checkbox" v-model="loyalty.is_enabled" class="sr-only peer" />
+                  <span class="relative w-11 h-6 rounded-full bg-gray-300 dark:bg-gray-600 peer-checked:bg-emerald-600 transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"></span>
                 </label>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -250,13 +304,30 @@
                 <div><label :class="lbl">Platinum from <span class="text-gray-400">(earns ×1.5)</span></label><input v-model.number="loyalty.platinum_threshold" type="number" min="1" :class="[inputCls, 'w-full']" /></div>
               </div>
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-4">Example: a ₱50,000 booking earns <b>{{ exampleEarn }}</b> points (Bronze) and {{ loyalty.min_redeem_points }} points are worth <b>{{ formatPeso(loyalty.min_redeem_points * loyalty.peso_per_point) }}</b>.</p>
-              <div class="mt-4"><button @click="submitLoyalty" :disabled="isSaving" :class="btnPrimary">{{ isSaving ? 'Saving...' : 'Save settings' }}</button></div>
+              <div class="mt-4"><button @click="submitLoyalty" :disabled="isSaving" :class="btnPrimary" class="w-full sm:w-auto">{{ isSaving ? 'Saving...' : 'Save settings' }}</button></div>
             </div>
 
             <div :class="card">
               <p class="p-4 font-semibold text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700">Members</p>
               <div v-if="!members.length" class="p-10 text-center text-sm text-gray-400 dark:text-gray-500">No one has earned points yet.</div>
-              <div v-else class="overflow-x-auto">
+              <div v-else>
+              <div class="md:hidden divide-y divide-gray-100 dark:divide-gray-700">
+                <div v-for="m in members" :key="'m' + m.client_id" class="p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="font-semibold text-gray-800 dark:text-gray-100 truncate">{{ m.full_name || 'Client' }}</p>
+                      <p class="text-xs text-gray-400 dark:text-gray-500 truncate">{{ m.email }}</p>
+                    </div>
+                    <span :class="tierBadgeClass(m.tier)" class="shrink-0 px-3 py-1 text-xs font-semibold">{{ m.tier }}</span>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 mt-3">
+                    <div><p class="text-xs text-gray-500 dark:text-gray-400">Points</p><p class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ m.points_balance.toLocaleString() }}</p></div>
+                    <div><p class="text-xs text-gray-500 dark:text-gray-400">Lifetime</p><p class="text-lg font-bold text-gray-600 dark:text-gray-300">{{ m.lifetime_points.toLocaleString() }}</p></div>
+                  </div>
+                  <button @click="openAdjust(m)" class="mt-3 w-full min-h-[44px] border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 active:bg-gray-100 dark:active:bg-gray-700">Adjust points</button>
+                </div>
+              </div>
+              <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-sm">
                   <thead class="text-left text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                     <tr><th class="px-4 py-3">Client</th><th class="px-4 py-3">Tier</th><th class="px-4 py-3">Points</th><th class="px-4 py-3">Lifetime</th><th class="px-4 py-3"></th></tr>
@@ -272,33 +343,43 @@
                   </tbody>
                 </table>
               </div>
+              </div>
             </div>
           </div>
         </template>
       </div>
     </main>
 
+    <!-- MOBILE FLOATING ADD BUTTON -->
+    <button v-if="!isLoading && !setupMissing && (tab === 'seasons' || tab === 'promos')"
+      @click="tab === 'seasons' ? openRuleModal() : openPromoModal()"
+      :aria-label="tab === 'seasons' ? 'Add season' : 'New promo code'"
+      class="sm:hidden fixed bottom-5 right-5 z-30 w-14 h-14 rounded-full bg-emerald-600 text-white shadow-lg active:bg-emerald-700 flex items-center justify-center print:hidden">
+      <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14" /></svg>
+    </button>
+
     <!-- SEASON MODAL -->
-    <div v-if="showRuleModal" class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+    <div v-if="showRuleModal" class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4">
       <div class="absolute inset-0 bg-black/50" @click="showRuleModal = false"></div>
-      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg p-5 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg p-5 sm:p-6 shadow-xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none">
+        <div class="sm:hidden mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{{ ruleForm.rule_id ? 'Edit season' : 'Add season' }}</h3>
         <label :class="lbl">Season name</label>
         <input v-model="ruleForm.rule_name" maxlength="80" placeholder="e.g. Christmas peak" :class="[inputCls, 'w-full mb-3']" />
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
           <div><label :class="lbl">Type</label><select v-model="ruleForm.adjustment_type" :class="[inputCls, 'w-full mb-3']"><option v-for="t in ADJUSTMENT_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option></select></div>
           <div><label :class="lbl">Amount (− for discount)</label><input v-model.number="ruleForm.adjustment_value" type="number" step="0.01" placeholder="20 or -10" :class="[inputCls, 'w-full mb-3']" /></div>
           <div><label :class="lbl">Starts</label><input v-model="ruleForm.start_date" type="date" :class="[inputCls, 'w-full mb-3']" /></div>
           <div><label :class="lbl">Ends</label><input v-model="ruleForm.end_date" type="date" :class="[inputCls, 'w-full mb-3']" /></div>
         </div>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3 cursor-pointer"><input type="checkbox" v-model="ruleForm.recurring_yearly" class="w-4 h-4 accent-emerald-600" /> Repeat every year (uses month and day only)</label>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
           <div><label :class="lbl">Applies to</label><select v-model="ruleForm.package_id" :class="[inputCls, 'w-full mb-3']"><option :value="null">All packages</option><option v-for="p in packages" :key="p.package_id" :value="p.package_id">{{ p.package_name }}</option></select></div>
           <div><label :class="lbl">Priority</label><input v-model.number="ruleForm.priority" type="number" step="1" :class="[inputCls, 'w-full mb-3']" /></div>
         </div>
         <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Higher priority wins when two seasons overlap.</p>
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm mb-3">{{ modalError }}</div>
-        <div class="flex gap-3">
+        <div class="flex gap-3 sticky bottom-0 -mx-5 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] -mb-5 sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 sm:mb-0 sm:static bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 sm:border-0">
           <button @click="showRuleModal = false" :disabled="isSaving" :class="btnGhost" class="flex-1">Cancel</button>
           <button @click="submitRule" :disabled="isSaving" :class="btnPrimary" class="flex-1">{{ isSaving ? 'Saving...' : 'Save' }}</button>
         </div>
@@ -306,11 +387,12 @@
     </div>
 
     <!-- PROMO MODAL -->
-    <div v-if="showPromoModal" class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+    <div v-if="showPromoModal" class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4">
       <div class="absolute inset-0 bg-black/50" @click="showPromoModal = false"></div>
-      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg p-5 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg p-5 sm:p-6 shadow-xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-none">
+        <div class="sm:hidden mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{{ promoForm.promo_id ? 'Edit promo code' : 'New promo code' }}</h3>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
           <div><label :class="lbl">Code</label><input :value="promoForm.code" @input="promoForm.code = normalizePromoCode($event.target.value)" maxlength="20" placeholder="SUMMER10" :class="[inputCls, 'w-full mb-3 font-mono uppercase']" /></div>
           <div><label :class="lbl">Description <span class="text-gray-400">(optional)</span></label><input v-model="promoForm.description" maxlength="80" :class="[inputCls, 'w-full mb-3']" /></div>
           <div><label :class="lbl">Discount type</label><select v-model="promoForm.discount_type" :class="[inputCls, 'w-full mb-3']"><option value="percent">Percent (%)</option><option value="fixed">Fixed amount (₱)</option></select></div>
@@ -324,7 +406,7 @@
         </div>
         <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-3 cursor-pointer"><input type="checkbox" v-model="promoForm.is_active" class="w-4 h-4 accent-emerald-600" /> Active</label>
         <div v-if="modalError" class="text-red-600 dark:text-red-400 text-sm mb-3">{{ modalError }}</div>
-        <div class="flex gap-3">
+        <div class="flex gap-3 sticky bottom-0 -mx-5 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] -mb-5 sm:mx-0 sm:px-0 sm:pt-0 sm:pb-0 sm:mb-0 sm:static bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 sm:border-0">
           <button @click="showPromoModal = false" :disabled="isSaving" :class="btnGhost" class="flex-1">Cancel</button>
           <button @click="submitPromo" :disabled="isSaving" :class="btnPrimary" class="flex-1">{{ isSaving ? 'Saving...' : 'Save' }}</button>
         </div>
@@ -332,9 +414,10 @@
     </div>
 
     <!-- ADJUST POINTS MODAL -->
-    <div v-if="adjusting" class="fixed inset-0 z-[80] flex items-center justify-center p-4">
+    <div v-if="adjusting" class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4">
       <div class="absolute inset-0 bg-black/50" @click="adjusting = null"></div>
-      <div class="relative bg-white dark:bg-gray-800 w-full max-w-sm p-5 sm:p-6 shadow-xl">
+      <div class="relative bg-white dark:bg-gray-800 w-full max-w-sm p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl rounded-t-2xl sm:rounded-none">
+        <div class="sm:hidden mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600"></div>
         <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Adjust points</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ adjusting.full_name || 'Client' }} · {{ adjusting.points_balance.toLocaleString() }} points now</p>
         <label :class="lbl">Points to add (− to remove)</label>
@@ -357,7 +440,7 @@
         <p class="text-sm text-gray-600 dark:text-gray-300 mb-5">{{ confirmState.message }}</p>
         <div class="flex gap-3">
           <button @click="confirmState = null" :class="btnGhost" class="flex-1">Keep</button>
-          <button @click="runConfirm" class="flex-1 py-2.5 bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">Delete</button>
+          <button @click="runConfirm" class="flex-1 py-2.5 min-h-[44px] sm:min-h-0 bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition">Delete</button>
         </div>
       </div>
     </div>
@@ -399,17 +482,18 @@ const userInitial = ref('U')
 const userAvatarUrl = ref('')
 
 const card = 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl'
-const inputCls = 'px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500'
+const inputCls = 'px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-none text-base sm:text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500'
 const lbl = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
-const btnGhost = 'px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60 transition'
-const btnPrimary = 'px-4 py-2.5 bg-emerald-600 text-white rounded-none text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 transition'
+const btnGhost = 'px-4 py-2.5 min-h-[44px] sm:min-h-0 border border-gray-200 dark:border-gray-700 rounded-none text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60 transition'
+const btnPrimary = 'px-4 py-2.5 min-h-[44px] sm:min-h-0 bg-emerald-600 text-white rounded-none text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 transition'
 
 const TABS = [
-  { key: 'seasons', label: 'Seasonal Pricing' },
-  { key: 'promos', label: 'Promo Codes' },
-  { key: 'loyalty', label: 'Loyalty Rewards' },
+  { key: 'seasons', label: 'Seasonal Pricing', short: 'Seasons' },
+  { key: 'promos', label: 'Promo Codes', short: 'Promos' },
+  { key: 'loyalty', label: 'Loyalty Rewards', short: 'Loyalty' },
 ]
 const tab = ref('seasons')
+const helpOpen = ref(false)
 const rules = ref([])
 const promos = ref([])
 const packages = ref([])
