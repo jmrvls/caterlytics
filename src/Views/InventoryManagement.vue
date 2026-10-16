@@ -612,65 +612,146 @@
     </div>
 
     <!-- ============ VIEW COMPUTATION MODAL ============ -->
-    <div v-if="calcItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeCalc">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex items-start justify-between gap-3 mb-4">
-          <div class="min-w-0">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Computation</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcItem.item_name }}</p>
-          </div>
-          <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none" aria-label="Close">&times;</button>
-        </div>
-
-        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Stock value</p>
-            <p class="tabular-nums">{{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }} × ₱{{ formatCost(calcItem.unit_cost) }} = <strong>₱{{ formatMoney(stockValue(calcItem)) }}</strong></p>
-          </div>
-
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Status</p>
-            <p class="tabular-nums">
-              In stock {{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }} vs. alert level {{ formatQty(calcItem.low_stock_threshold, calcItem.unit || 'kg') }}
-              → <strong :class="LEVELS[stockLevel(calcItem)].text">{{ LEVELS[stockLevel(calcItem)].label }}</strong>
-            </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">
-              Low = at or below {{ formatQty(calcItem.low_stock_threshold) }} · Running low = up to {{ formatQty(Number(calcItem.low_stock_threshold) * NEAR_LOW_FACTOR) }} ({{ formatQty(calcItem.low_stock_threshold) }} × {{ NEAR_LOW_FACTOR }})
-            </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">
-              Stock bar = {{ formatQty(calcItem.quantity) }} ÷ ({{ formatQty(calcItem.low_stock_threshold) }} × 3) = {{ Math.round(stockRatio(calcItem) * 100) }}%
-            </p>
-          </div>
-
-          <div v-if="calcNeed && calcNeed.needed > 0">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Pending events</p>
-            <div v-if="calcBreakdown(calcItem.item_id).length" class="text-xs text-gray-500 dark:text-gray-400 mb-1 tabular-nums">
-              <p v-for="c in calcBreakdown(calcItem.item_id)" :key="c.booking_id">{{ c.client_name || 'Event' }} ({{ formatEventDate(c.event_date) }}): {{ formatQty(c.needed, calcItem.unit || 'kg') }}</p>
+    <Transition name="calc-modal">
+      <div v-if="calcItem" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 sm:p-4" @click.self="closeCalc">
+        <div class="calc-panel bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:max-w-lg max-h-[92vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="calc-title">
+          <!-- Header -->
+          <div class="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div class="min-w-0">
+              <h3 id="calc-title" class="text-lg font-bold text-gray-900 dark:text-gray-100">Computation</h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcItem.item_name }}<span v-if="calcItem.category"> · {{ calcItem.category }}</span></p>
             </div>
-            <p class="tabular-nums">Total needed = <strong>{{ formatQty(calcNeed.needed, calcItem.unit || 'kg') }}</strong></p>
-            <p v-if="calcNeed.short_by > 0" class="text-red-600 dark:text-red-400 tabular-nums">Short by = {{ formatQty(calcNeed.needed) }} − {{ formatQty(calcNeed.in_stock) }} = <strong>{{ formatQty(calcNeed.short_by, calcItem.unit || 'kg') }}</strong></p>
-            <p v-else class="text-emerald-600 dark:text-emerald-400 tabular-nums">Enough: {{ formatQty(calcNeed.in_stock) }} − {{ formatQty(calcNeed.needed) }} = <strong>{{ formatQty(calcNeed.in_stock - calcNeed.needed, calcItem.unit || 'kg') }}</strong> left</p>
+            <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl leading-none -mt-1" aria-label="Close">&times;</button>
           </div>
 
-          <div v-if="needsReorder(calcItem)">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Suggested reorder</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">Top up = {{ formatQty(Number(calcItem.low_stock_threshold) * 3) }} (alert × 3) − {{ formatQty(calcItem.quantity) }} in stock, at least {{ formatQty(calcItem.low_stock_threshold) }}</p>
-            <p v-if="(calcNeed?.short_by || 0) > 0" class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">For events = {{ Math.ceil(calcNeed.short_by) }} (short) + {{ formatQty(calcItem.low_stock_threshold) }} (alert level)</p>
-            <p class="mt-1 tabular-nums">Order about <strong>{{ formatQty(reorderQtyFor(calcItem), calcItem.unit || 'kg') }}</strong> <span class="text-xs text-gray-500 dark:text-gray-400">(the larger of the two)</span></p>
+          <div class="overflow-y-auto px-5 sm:px-6 py-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
+            <!-- Stock value -->
+            <section class="border-l-4 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10 pl-4 pr-3 py-3">
+              <p class="calc-label"><span aria-hidden="true">📦</span> Stock value</p>
+              <div class="mt-2 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 tabular-nums text-gray-600 dark:text-gray-300">
+                <span class="text-xs text-gray-500 dark:text-gray-400 self-center">Quantity</span>
+                <span class="text-right">{{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }}</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 self-center">Unit cost</span>
+                <span class="text-right">× ₱{{ formatCost(calcItem.unit_cost) }}</span>
+              </div>
+              <div class="mt-2 pt-2 border-t border-emerald-200 dark:border-emerald-800 flex items-baseline justify-between">
+                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Total</span>
+                <span class="text-2xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-300">₱{{ formatMoney(stockValue(calcItem)) }}</span>
+              </div>
+            </section>
+
+            <!-- Status -->
+            <section class="border-l-4 pl-4 pr-3 py-3 bg-gray-50 dark:bg-gray-900/30" :class="calcLevel.border">
+              <div class="flex items-center justify-between gap-2">
+                <p class="calc-label"><span aria-hidden="true">📊</span> Status</p>
+                <span class="px-2 py-0.5 text-xs font-bold rounded-full" :class="calcLevel.badge">{{ calcLevel.label }}</span>
+              </div>
+              <p class="mt-2 tabular-nums">
+                In stock <strong>{{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }}</strong> vs. alert level <strong>{{ formatQty(calcItem.low_stock_threshold, calcItem.unit || 'kg') }}</strong>
+              </p>
+
+              <!-- Stock bar with threshold markers -->
+              <div class="mt-3">
+                <div class="relative h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full">
+                  <div class="h-full rounded-full transition-all" :class="LEVELS[stockLevel(calcItem)].bar" :style="{ width: Math.round(stockRatio(calcItem) * 100) + '%' }"></div>
+                  <template v-if="Number(calcItem.low_stock_threshold) > 0">
+                    <span class="absolute -top-1 -bottom-1 w-0.5 bg-red-500" :style="{ left: (100 / 3) + '%' }" title="Alert level"></span>
+                    <span class="absolute -top-1 -bottom-1 w-0.5 bg-amber-500" :style="{ left: (NEAR_LOW_FACTOR / 3 * 100) + '%' }" title="Running-low limit"></span>
+                  </template>
+                </div>
+                <div v-if="Number(calcItem.low_stock_threshold) > 0" class="relative h-4 mt-1 text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+                  <span class="absolute -translate-x-1/2 text-red-600 dark:text-red-400" :style="{ left: (100 / 3) + '%' }">{{ formatQty(calcItem.low_stock_threshold) }}</span>
+                  <span class="absolute -translate-x-1/2 text-amber-600 dark:text-amber-400" :style="{ left: (NEAR_LOW_FACTOR / 3 * 100) + '%' }">{{ formatQty(Number(calcItem.low_stock_threshold) * NEAR_LOW_FACTOR) }}</span>
+                  <span class="absolute right-0 text-gray-400">{{ formatQty(Number(calcItem.low_stock_threshold) * 3) }}</span>
+                </div>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums flex items-center gap-1.5">
+                  <span>Bar fill: {{ Math.round(stockRatio(calcItem) * 100) }}%</span>
+                  <button type="button" @click="showBarHelp = !showBarHelp" class="w-4 h-4 inline-flex items-center justify-center rounded-full border border-gray-300 dark:border-gray-600 text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="What does the bar mean?" :aria-expanded="showBarHelp">?</button>
+                </p>
+                <p v-if="showBarHelp" class="mt-1 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 tabular-nums">
+                  The bar is full (100%) at 3× the alert level. Here: {{ formatQty(calcItem.quantity) }} ÷ ({{ formatQty(calcItem.low_stock_threshold) }} × 3) = {{ Math.round(stockRatio(calcItem) * 100) }}%, capped at 100%.
+                </p>
+              </div>
+
+              <!-- Level guide -->
+              <ul class="mt-3 space-y-1 text-xs tabular-nums">
+                <li v-for="r in calcRanges" :key="r.key" class="flex items-center justify-between px-2 py-1 rounded" :class="r.key === stockLevel(calcItem) ? r.active : 'text-gray-500 dark:text-gray-400'">
+                  <span><span aria-hidden="true">{{ r.dot }}</span> {{ r.label }}</span>
+                  <span class="flex items-center gap-2">
+                    <span>{{ r.range }}</span>
+                    <span v-if="r.key === stockLevel(calcItem)" class="font-bold">← you are here</span>
+                  </span>
+                </li>
+              </ul>
+
+              <p class="mt-2 text-xs tabular-nums" :class="calcLevel.text">{{ calcRestockHint }}</p>
+            </section>
+
+            <!-- Pending events -->
+            <section v-if="calcNeed && calcNeed.needed > 0" class="border-l-4 border-indigo-400 bg-gray-50 dark:bg-gray-900/30 pl-4 pr-3 py-3">
+              <p class="calc-label"><span aria-hidden="true">📅</span> Pending events</p>
+              <div v-if="calcBreakdown(calcItem.item_id).length" class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums space-y-0.5">
+                <p v-for="c in calcBreakdown(calcItem.item_id)" :key="c.booking_id" class="flex justify-between gap-3">
+                  <span class="truncate">{{ c.client_name || 'Event' }} ({{ formatEventDate(c.event_date) }})</span>
+                  <span>{{ formatQty(c.needed, calcItem.unit || 'kg') }}</span>
+                </p>
+              </div>
+              <div class="mt-2 grid grid-cols-3 gap-2 text-center tabular-nums">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 py-1.5">
+                  <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">In stock</p>
+                  <p class="font-semibold">{{ formatQty(calcNeed.in_stock, calcItem.unit || 'kg') }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 py-1.5">
+                  <p class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Reserved</p>
+                  <p class="font-semibold">{{ formatQty(calcNeed.needed, calcItem.unit || 'kg') }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 py-1.5">
+                  <p class="text-[10px] uppercase tracking-wide" :class="calcNeed.short_by > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">{{ calcNeed.short_by > 0 ? 'Short by' : 'Free' }}</p>
+                  <p class="font-bold" :class="calcNeed.short_by > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">{{ formatQty(calcNeed.short_by > 0 ? calcNeed.short_by : calcNeed.in_stock - calcNeed.needed, calcItem.unit || 'kg') }}</p>
+                </div>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                <template v-if="calcNeed.short_by > 0">Short by = {{ formatQty(calcNeed.needed) }} − {{ formatQty(calcNeed.in_stock) }}</template>
+                <template v-else>Free = {{ formatQty(calcNeed.in_stock) }} − {{ formatQty(calcNeed.needed) }}</template>
+              </p>
+            </section>
+
+            <!-- Suggested reorder -->
+            <section v-if="needsReorder(calcItem)" class="border-l-4 border-sky-400 bg-gray-50 dark:bg-gray-900/30 pl-4 pr-3 py-3">
+              <p class="calc-label"><span aria-hidden="true">🛒</span> Suggested reorder</p>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">Top up = {{ formatQty(Number(calcItem.low_stock_threshold) * 3) }} (alert × 3) − {{ formatQty(calcItem.quantity) }} in stock, at least {{ formatQty(calcItem.low_stock_threshold) }}</p>
+              <p v-if="(calcNeed?.short_by || 0) > 0" class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">For events = {{ Math.ceil(calcNeed.short_by) }} (short) + {{ formatQty(calcItem.low_stock_threshold) }} (alert level)</p>
+              <p class="mt-2 tabular-nums">Order about <strong class="text-base">{{ formatQty(reorderQtyFor(calcItem), calcItem.unit || 'kg') }}</strong> <span class="text-xs text-gray-500 dark:text-gray-400">(the larger of the two)</span></p>
+            </section>
+
+            <!-- Expiry -->
+            <section v-if="expiryInfo(calcItem)" class="border-l-4 pl-4 pr-3 py-3 bg-gray-50 dark:bg-gray-900/30" :class="calcExpiryBorder">
+              <div class="flex items-center justify-between gap-2">
+                <p class="calc-label"><span aria-hidden="true">⏳</span> Expiry</p>
+                <span class="text-xs font-bold" :class="EXPIRY_TEXT[expiryInfo(calcItem).state]">{{ expiryInfo(calcItem).label }}</span>
+              </div>
+              <p class="mt-1 tabular-nums">{{ formatEventDate(calcItem.expiry_date) }}</p>
+              <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden" role="progressbar" aria-valuemin="0" :aria-valuemax="EXPIRY_BAR_DAYS" :aria-valuenow="Math.max(0, Math.min(EXPIRY_BAR_DAYS, expiryInfo(calcItem).days))">
+                <div class="h-full rounded-full transition-all" :class="calcExpiryBar" :style="{ width: calcExpiryPct + '%' }"></div>
+              </div>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <template v-if="expiryInfo(calcItem).days < 0">Already past its date. Use it first or log it as waste.</template>
+                <template v-else>{{ expiryInfo(calcItem).days }} day{{ expiryInfo(calcItem).days === 1 ? '' : 's' }} left · bar shows the next {{ EXPIRY_BAR_DAYS }} days · flagged "soon" at {{ EXPIRING_SOON_DAYS }} days or less</template>
+              </p>
+            </section>
+
+            <p v-if="lastMoved[calcItem.item_id]" class="text-xs text-gray-400 dark:text-gray-500">Last stock movement: {{ timeAgo(lastMoved[calcItem.item_id]) }}</p>
           </div>
 
-          <div v-if="expiryInfo(calcItem)">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Expiry</p>
-            <p :class="EXPIRY_TEXT[expiryInfo(calcItem).state]" class="font-semibold">{{ formatEventDate(calcItem.expiry_date) }} → {{ expiryInfo(calcItem).label }}</p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Flagged "soon" at {{ EXPIRING_SOON_DAYS }} days or less.</p>
+          <!-- Footer / quick actions -->
+          <div class="flex flex-wrap items-center justify-end gap-2 px-5 sm:px-6 py-4 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" @click="closeCalc" class="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 mr-auto">Close</button>
+            <button type="button" @click="calcEdit" class="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Edit item</button>
+            <button type="button" @click="calcAdjust" class="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Adjust stock</button>
           </div>
-        </div>
-
-        <div class="flex justify-end mt-5">
-          <button type="button" @click="closeCalc" class="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- ============ STOCK IN / OUT MODAL ============ -->
     <div v-if="showAdjustModal && adjustItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -1148,8 +1229,71 @@ function formatEventDate(dateStr) {
 // ---------- Per-row "View computation" modal ----------
 const calcItem = ref(null)
 const calcNeed = computed(() => (calcItem.value ? needByItem.value.get(calcItem.value.item_id) || null : null))
-const openCalc = (i) => { calcItem.value = i }
+const showBarHelp = ref(false)
+const openCalc = (i) => { showBarHelp.value = false; calcItem.value = i }
 const closeCalc = () => { calcItem.value = null }
+// Quick actions from inside the computation modal.
+const calcAdjust = () => { const i = calcItem.value; closeCalc(); if (i) openAdjustModal(i) }
+const calcEdit = () => { const i = calcItem.value; closeCalc(); if (i) openEditModal(i) }
+// Esc closes the modal.
+function onCalcKey(e) { if (e.key === 'Escape' && calcItem.value) closeCalc() }
+watch(calcItem, (v) => {
+  if (v) window.addEventListener('keydown', onCalcKey)
+  else window.removeEventListener('keydown', onCalcKey)
+})
+onUnmounted(() => window.removeEventListener('keydown', onCalcKey))
+
+const LEVEL_STYLE = {
+  low: { border: 'border-red-500', badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', text: 'text-red-700 dark:text-red-300', active: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 font-semibold' },
+  near: { border: 'border-amber-500', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', text: 'text-amber-700 dark:text-amber-300', active: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 font-semibold' },
+  ok: { border: 'border-emerald-500', badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', text: 'text-emerald-700 dark:text-emerald-300', active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 font-semibold' }
+}
+const calcLevel = computed(() => {
+  const key = calcItem.value ? stockLevel(calcItem.value) : 'ok'
+  return { ...LEVELS[key], ...LEVEL_STYLE[key] }
+})
+// Plain-language ranges: Low / Running low / OK.
+const calcRanges = computed(() => {
+  const i = calcItem.value
+  if (!i) return []
+  const t = Number(i.low_stock_threshold) || 0
+  const near = t * NEAR_LOW_FACTOR
+  const u = i.unit || 'kg'
+  return [
+    { key: 'low', dot: '🔴', label: 'Low', range: `${formatQty(t, u)} or below`, active: LEVEL_STYLE.low.active },
+    { key: 'near', dot: '🟠', label: 'Running low', range: `above ${formatQty(t)} up to ${formatQty(near, u)}`, active: LEVEL_STYLE.near.active },
+    { key: 'ok', dot: '🟢', label: 'OK', range: `above ${formatQty(near, u)}`, active: LEVEL_STYLE.ok.active }
+  ]
+})
+// How far from (or below) the alert level, so the next step is obvious.
+const calcRestockHint = computed(() => {
+  const i = calcItem.value
+  if (!i) return ''
+  const u = i.unit || 'kg'
+  const qty = Number(i.quantity) || 0
+  const t = Number(i.low_stock_threshold) || 0
+  const near = t * NEAR_LOW_FACTOR
+  const lvl = stockLevel(i)
+  if (lvl === 'low') return `${formatQty(t - qty, u)} below the alert level. Restock now.`
+  if (lvl === 'near') return `Only ${formatQty(qty - t, u)} above the alert level. Plan a restock soon.`
+  return t > 0
+    ? `${formatQty(qty - t, u)} to go before it hits the alert level (${formatQty(qty - near, u)} before "running low").`
+    : 'No alert level set for this item.'
+})
+const EXPIRY_BAR_DAYS = 30
+const calcExpiryPct = computed(() => {
+  const info = calcItem.value ? expiryInfo(calcItem.value) : null
+  if (!info) return 0
+  return Math.max(0, Math.min(100, Math.round((info.days / EXPIRY_BAR_DAYS) * 100)))
+})
+const calcExpiryBorder = computed(() => {
+  const st = calcItem.value ? expiryInfo(calcItem.value)?.state : 'ok'
+  return st === 'expired' ? 'border-red-500' : st === 'soon' ? 'border-amber-500' : 'border-gray-300 dark:border-gray-600'
+})
+const calcExpiryBar = computed(() => {
+  const st = calcItem.value ? expiryInfo(calcItem.value)?.state : 'ok'
+  return st === 'expired' ? 'bg-red-500' : st === 'soon' ? 'bg-amber-500' : 'bg-emerald-500'
+})
 
 const needsReorder = (i) => stockLevel(i) !== 'ok' || (needByItem.value.get(i.item_id)?.short_by || 0) > 0
 const reorderQtyFor = (i) => suggestedReorderQty(i, needByItem.value.get(i.item_id)?.short_by || 0)
@@ -1540,4 +1684,30 @@ const navItems = computed(() =>
 </script>
 
 <style scoped>
+.calc-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+:global(.dark) .calc-label { color: #9ca3af; }
+
+/* Computation modal: fade backdrop + scale panel (bottom sheet on mobile) */
+.calc-modal-enter-active,
+.calc-modal-leave-active { transition: opacity 0.18s ease; }
+.calc-modal-enter-active .calc-panel,
+.calc-modal-leave-active .calc-panel { transition: transform 0.2s ease, opacity 0.2s ease; }
+.calc-modal-enter-from,
+.calc-modal-leave-to { opacity: 0; }
+.calc-modal-enter-from .calc-panel,
+.calc-modal-leave-to .calc-panel { opacity: 0; transform: scale(0.96) translateY(8px); }
+@media (max-width: 639px) {
+  .calc-modal-enter-from .calc-panel,
+  .calc-modal-leave-to .calc-panel { transform: translateY(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calc-modal-enter-active, .calc-modal-leave-active,
+  .calc-modal-enter-active .calc-panel, .calc-modal-leave-active .calc-panel { transition: none; }
+}
 </style>
