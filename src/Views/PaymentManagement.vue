@@ -206,6 +206,8 @@
               </div>
             </div>
 
+            <button type="button" @click="openCalc(p)" class="mb-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 underline">View computation</button>
+
             <div class="flex items-center gap-2">
               <button
                 v-if="p.payment_status !== 'Paid'"
@@ -278,7 +280,10 @@
                   <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">{{ formatDate(p.tbl_bookings?.event_date) }}</td>
                   <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">₱{{ Number(p.total_amount).toLocaleString() }}</td>
                   <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">₱{{ Number(p.amount_paid).toLocaleString() }}</td>
-                  <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">₱{{ Number(p.balance).toLocaleString() }}</td>
+                  <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">
+                    <div>₱{{ Number(p.balance).toLocaleString() }}</div>
+                    <button type="button" @click="openCalc(p)" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View computation</button>
+                  </td>
                   <td class="px-6 py-3.5 align-middle">
                     <span :class="statusStyle(p.payment_status)" class="inline-block align-middle text-xs font-semibold leading-5">
                       {{ p.payment_status }}
@@ -394,6 +399,62 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ============ VIEW COMPUTATION MODAL ============ -->
+    <div v-if="calcPayment" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeCalc">
+      <div class="bg-white dark:bg-gray-800 rounded-none shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div class="min-w-0">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Computation</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate capitalize">{{ calcPayment.tbl_bookings?.client_name || 'Client' }} · {{ formatDate(calcPayment.tbl_bookings?.event_date) }}</p>
+          </div>
+          <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Total</p>
+            <p v-if="calcLoading" class="text-xs text-gray-400">Loading breakdown...</p>
+            <template v-else-if="calcTotal">
+              <template v-if="calcTotal.kind === 'quoted'">
+                <p class="tabular-nums">Quoted total = <strong>{{ peso(calcTotal.amount) }}</strong></p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Price set when the booking was made (includes any seasonal rate, promo code, or loyalty points).</p>
+              </template>
+              <template v-else-if="calcTotal.kind === 'package'">
+                <p class="tabular-nums">Package: {{ peso(calcTotal.perHead) }} × {{ calcTotal.guests }} guests = {{ peso(calcTotal.packageTotal) }}</p>
+                <p v-for="a in calcTotal.addons" :key="a.booking_addon_id" class="text-xs text-gray-600 dark:text-gray-300 tabular-nums">+ {{ a.addon_name }}: {{ a.quantity }} × {{ peso(a.unit_price) }} = {{ peso(a.subtotal ?? a.unit_price * a.quantity) }}</p>
+                <p v-if="!calcTotal.addons.length" class="text-xs text-gray-400">No add-ons.</p>
+                <p class="tabular-nums">Total = {{ peso(calcTotal.packageTotal) }}<template v-if="calcTotal.addons.length"> + {{ peso(calcTotal.addonsTotal) }}</template> = <strong>{{ peso(calcTotal.amount) }}</strong></p>
+              </template>
+              <p v-if="calcTotal.amount !== Number(calcPayment.total_amount)" class="text-xs text-amber-600 dark:text-amber-400 mt-1">The recorded total is {{ peso(calcPayment.total_amount) }} (edited by staff, e.g. a discount or custom quote).</p>
+            </template>
+            <p v-else class="tabular-nums">Recorded total = <strong>{{ peso(calcPayment.total_amount) }}</strong> <span class="text-xs text-gray-500 dark:text-gray-400">(set when the payment record was created)</span></p>
+          </div>
+
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Paid so far</p>
+            <p class="tabular-nums"><strong class="text-emerald-600 dark:text-emerald-400">{{ peso(calcPayment.amount_paid) }}</strong> <span class="text-xs text-gray-500 dark:text-gray-400">(all installments added together)</span></p>
+          </div>
+
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Balance</p>
+            <p class="tabular-nums">{{ peso(calcPayment.total_amount) }} − {{ peso(calcPayment.amount_paid) }} = <strong>{{ peso(Math.max(Number(calcPayment.total_amount) - Number(calcPayment.amount_paid), 0)) }}</strong></p>
+            <div class="h-1.5 bg-gray-100 dark:bg-gray-700 mt-2"><div class="h-full bg-emerald-500" :style="{ width: calcPaidPct + '%' }"></div></div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">{{ peso(calcPayment.amount_paid) }} ÷ {{ peso(calcPayment.total_amount) }} = {{ calcPaidPct }}% paid</p>
+          </div>
+
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Status</p>
+            <p><strong :class="statusStyle(calcPayment.payment_status)">{{ calcPayment.payment_status }}</strong></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Paid = paid is equal to or more than the total · Partial = paid something, but not all · Unpaid = nothing paid yet.</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-5">
+          <button type="button" @click="closeCalc" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-none font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
+        </div>
       </div>
     </div>
 
@@ -627,6 +688,50 @@ async function handleCreatePayment() {
   } finally {
     isSaving.value = false
   }
+}
+
+// ---------- "View computation" popup ----------
+const calcPayment = ref(null)
+const calcTotal = ref(null)
+const calcLoading = ref(false)
+let calcSeq = 0
+const peso = (v) => `₱${Number(v || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+const calcPaidPct = computed(() => {
+  const t = Number(calcPayment.value?.total_amount) || 0
+  const paid = Number(calcPayment.value?.amount_paid) || 0
+  return t > 0 ? Math.min(100, Math.round((paid / t) * 100)) : 0
+})
+async function openCalc(payment) {
+  const seq = ++calcSeq
+  calcPayment.value = payment
+  calcTotal.value = null
+  const booking = bookings.value.find((b) => b.booking_id === payment.booking_id)
+  if (!booking) return
+  if (booking.quoted_total != null && Number(booking.quoted_total) > 0) {
+    calcTotal.value = { kind: 'quoted', amount: Number(booking.quoted_total) }
+    return
+  }
+  const pkg = packages.value.find((x) => x.package_id === booking.package_id)
+  if (!pkg || pkg.price_per_head == null || !booking.guest_count) return
+  calcLoading.value = true
+  try {
+    const addons = await getBookingAddons(payment.booking_id)
+    if (seq !== calcSeq) return
+    const perHead = Number(pkg.price_per_head)
+    const guests = Number(booking.guest_count)
+    const addonsTotal = sumAddons(addons)
+    calcTotal.value = { kind: 'package', perHead, guests, packageTotal: perHead * guests, addons, addonsTotal, amount: perHead * guests + addonsTotal }
+  } catch (error) {
+    console.error('Failed to load add-ons for computation:', error)
+  } finally {
+    if (seq === calcSeq) calcLoading.value = false
+  }
+}
+function closeCalc() {
+  calcSeq++
+  calcPayment.value = null
+  calcTotal.value = null
+  calcLoading.value = false
 }
 
 function openRecordModal(payment) {

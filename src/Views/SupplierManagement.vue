@@ -157,6 +157,7 @@
             <div v-for="c in cards" :key="c.label" :class="card" class="p-4">
               <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ c.label }}</p>
               <p :class="c.warn ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'" class="text-xl sm:text-2xl font-bold break-words">{{ c.value }}</p>
+              <button type="button" @click="openCardCalc(c.key)" class="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View computation</button>
             </div>
           </div>
 
@@ -196,7 +197,10 @@
                     </td>
                     <td class="px-4 py-3 text-right">{{ statsOf(s).orders }}</td>
                     <td class="px-4 py-3 text-right">{{ statsOf(s).open }}</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap">{{ formatPeso(statsOf(s).spent) }}</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                      <div>{{ formatPeso(statsOf(s).spent) }}</div>
+                      <button type="button" @click="openSupplierCalc(s)" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View computation</button>
+                    </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap space-x-3">
                       <button @click="openPoModal(null, s.supplier_id)" :disabled="!s.is_active" class="text-emerald-700 dark:text-emerald-300 hover:underline disabled:opacity-40 disabled:no-underline">Order</button>
                       <button @click="openSupplierModal(s)" class="text-gray-600 dark:text-gray-300 hover:underline">Edit</button>
@@ -414,6 +418,90 @@
       </div>
     </div>
 
+    <!-- VIEW COMPUTATION -->
+    <div v-if="calcView" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="closeCalc"></div>
+      <div class="relative bg-white dark:bg-gray-800 w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-xl" role="dialog" aria-modal="true">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div class="min-w-0">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Computation</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcTitle }}</p>
+          </div>
+          <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none" aria-label="Close">&times;</button>
+        </div>
+
+        <!-- Card: Active suppliers -->
+        <div v-if="calcView.kind === 'card' && calcView.key === 'active'" class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
+          <p>Suppliers marked active = <strong>{{ activeSuppliers.length }}</strong> of {{ suppliers.length }} total</p>
+          <p v-if="suppliers.length - activeSuppliers.length" class="text-xs text-gray-500 dark:text-gray-400">{{ suppliers.length - activeSuppliers.length }} inactive supplier(s) are not counted.</p>
+        </div>
+
+        <!-- Card: Open / Overdue orders -->
+        <div v-else-if="calcView.kind === 'card' && (calcView.key === 'open' || calcView.key === 'overdue')" class="text-sm text-gray-700 dark:text-gray-200 space-y-2">
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            <template v-if="calcView.key === 'open'">Open = orders with status Ordered or Partially Received.</template>
+            <template v-else>Overdue = open orders whose expected date is before today ({{ formatShortDate(today) }}).</template>
+          </p>
+          <p v-if="!calcOrderRows.length" class="text-gray-500 dark:text-gray-400">None right now.</p>
+          <div v-for="o in calcOrderRows" :key="o.po_id" class="flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-1">
+            <span class="min-w-0 truncate">{{ o.po_number }} · {{ supplierOf(o)?.supplier_name || 'Supplier' }}</span>
+            <span class="text-xs whitespace-nowrap" :class="overdue(o) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-500 dark:text-gray-400'">
+              {{ o.expected_date ? 'Expected ' + formatShortDate(o.expected_date) : 'No date' }}<template v-if="overdue(o)"> · {{ -daysFrom(o.expected_date, today) }}d late</template>
+            </span>
+          </div>
+          <p class="pt-1">Count = <strong>{{ calcOrderRows.length }}</strong></p>
+        </div>
+
+        <!-- Card: Value still to arrive -->
+        <div v-else-if="calcView.kind === 'card' && calcView.key === 'arrive'" class="text-sm text-gray-700 dark:text-gray-200 space-y-3">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Only the part not yet delivered: (ordered − received) × unit cost, for every open order.</p>
+          <p v-if="!arriveRows.length" class="text-gray-500 dark:text-gray-400">No open orders.</p>
+          <div v-for="r in arriveRows" :key="r.po.po_id">
+            <p class="font-semibold">{{ r.po.po_number }} · {{ supplierOf(r.po)?.supplier_name || 'Supplier' }}</p>
+            <p v-for="(l, idx) in r.lines" :key="idx" class="text-xs text-gray-600 dark:text-gray-300 tabular-nums">
+              {{ l.name }}: ({{ l.ordered }} − {{ l.received }}) = {{ l.left }} {{ l.unit }} × {{ formatPeso(l.cost) }} = {{ formatPeso(l.amount) }}
+            </p>
+            <p class="text-xs tabular-nums text-right">Subtotal {{ formatPeso(r.subtotal) }}</p>
+          </div>
+          <p class="border-t border-gray-200 dark:border-gray-700 pt-2 tabular-nums">
+            <template v-if="arriveRows.length > 1">{{ arriveRows.map((r) => formatPeso(r.subtotal)).join(' + ') }} = </template><strong>{{ formatPeso(arriveTotal) }}</strong>
+          </p>
+        </div>
+
+        <!-- Supplier row -->
+        <div v-else-if="calcView.kind === 'supplier' && supplierCalc" class="text-sm text-gray-700 dark:text-gray-200 space-y-4">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Received value</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Delivered quantity × unit cost, on every order that is not Draft or Cancelled.</p>
+            <p v-if="!supplierCalc.orders.length" class="text-gray-500 dark:text-gray-400">No orders yet.</p>
+            <div v-for="r in supplierCalc.orders" :key="r.po.po_id" class="mb-1">
+              <p class="font-semibold">{{ r.po.po_number }} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">({{ statusOf(r.po.status).label }})</span></p>
+              <p v-for="(l, idx) in r.lines" :key="idx" class="text-xs text-gray-600 dark:text-gray-300 tabular-nums">{{ l.name }}: {{ l.received }} {{ l.unit }} × {{ formatPeso(l.cost) }} = {{ formatPeso(l.amount) }}</p>
+              <p v-if="!r.lines.length" class="text-xs text-gray-400">Nothing delivered yet.</p>
+            </div>
+            <p class="border-t border-gray-200 dark:border-gray-700 pt-2 tabular-nums">Total received = <strong>{{ formatPeso(supplierCalc.spent) }}</strong></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Orders counted = {{ supplierCalc.orders.length }} · Still open = {{ supplierCalc.open }}</p>
+          </div>
+
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Reliability</p>
+            <p v-if="!supplierCalc.completed" class="text-gray-500 dark:text-gray-400">No completed (fully received) orders yet, so nothing to rate.</p>
+            <template v-else>
+              <p class="tabular-nums">Completed orders = {{ supplierCalc.completed }} <span class="text-xs text-gray-500 dark:text-gray-400">(a rating needs at least {{ SCORECARD_MIN_ORDERS }})</span></p>
+              <p class="tabular-nums">On time = {{ supplierCalc.onTime }} ÷ {{ supplierCalc.dated }} orders received on or before the expected date = <strong>{{ supplierCalc.onTimePct === null ? '—' : supplierCalc.onTimePct + '%' }}</strong></p>
+              <p class="tabular-nums">Filled = {{ supplierCalc.received }} ÷ {{ supplierCalc.ordered }} ordered qty = <strong>{{ supplierCalc.fillPct === null ? '—' : supplierCalc.fillPct + '%' }}</strong></p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Reliable = 90%+ on time and 95%+ filled · Fair = 70%+ and 85%+ · otherwise Needs attention.</p>
+              <p class="mt-1">Rating: <strong>{{ scoreOf(supplierCalc.supplier)?.rating || 'Not enough orders yet' }}</strong></p>
+            </template>
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-5">
+          <button type="button" @click="closeCalc" :class="btnGhost">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PURCHASE ORDER DETAIL -->
     <div v-if="detail" class="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/50" @click="detail = null"></div>
@@ -542,7 +630,7 @@ import {
 import { UNIT_OPTIONS } from '../utils/inventory'
 import {
   SUPPLIER_CATEGORIES, PAYMENT_TERMS, PO_STATUS, OPEN_STATUSES, poTotal, lineTotal, poOutstandingValue,
-  isOverdue, buildSchedule, supplierStats, formatPeso, formatShortDate, localISODate,
+  isOverdue, buildSchedule, supplierStats, formatPeso, formatShortDate, localISODate, daysFrom,
   buildSuggestedOrders, supplierScorecards, SCORECARD_MIN_ORDERS, RATING_STYLE, buildPayables, payableInfo
 } from '../utils/suppliers'
 
@@ -609,15 +697,70 @@ const schedule = computed(() => buildSchedule(orders.value, today.value))
 const cards = computed(() => {
   const late = openOrders.value.filter(overdue).length
   return [
-    { label: 'Active suppliers', value: activeSuppliers.value.length },
-    { label: 'Open orders', value: openOrders.value.length },
-    { label: 'Overdue deliveries', value: late, warn: late > 0 },
-    { label: 'Value still to arrive', value: formatPeso(openOrders.value.reduce((s, o) => s + poOutstandingValue(o), 0)) },
+    { key: 'active', label: 'Active suppliers', value: activeSuppliers.value.length },
+    { key: 'open', label: 'Open orders', value: openOrders.value.length },
+    { key: 'overdue', label: 'Overdue deliveries', value: late, warn: late > 0 },
+    { key: 'arrive', label: 'Value still to arrive', value: formatPeso(openOrders.value.reduce((s, o) => s + poOutstandingValue(o), 0)) },
   ]
 })
 
 const supplierById = computed(() => new Map(suppliers.value.map((s) => [s.supplier_id, s])))
 const supplierOf = (po) => supplierById.value.get(po?.supplier_id) || null
+
+// ---- "View computation" popups ----
+const calcView = ref(null) // { kind: 'card', key } | { kind: 'supplier', id }
+const openCardCalc = (key) => { calcView.value = { kind: 'card', key } }
+const openSupplierCalc = (s) => { calcView.value = { kind: 'supplier', id: s.supplier_id } }
+const closeCalc = () => { calcView.value = null }
+const num = (v) => Number(v) || 0
+const calcTitle = computed(() => {
+  const v = calcView.value
+  if (!v) return ''
+  if (v.kind === 'supplier') return supplierById.value.get(v.id)?.supplier_name || 'Supplier'
+  return { active: 'Active suppliers', open: 'Open orders', overdue: 'Overdue deliveries', arrive: 'Value still to arrive' }[v.key] || ''
+})
+const calcOrderRows = computed(() => (calcView.value?.key === 'overdue' ? openOrders.value.filter(overdue) : openOrders.value))
+const arriveRows = computed(() => openOrders.value.map((po) => ({
+  po,
+  subtotal: poOutstandingValue(po),
+  lines: (po.items || [])
+    .map((l) => ({ name: l.item_name, unit: l.unit || '', ordered: num(l.quantity), received: num(l.received_qty), left: Math.max(num(l.quantity) - num(l.received_qty), 0), cost: num(l.unit_cost) }))
+    .filter((l) => l.left > 0)
+    .map((l) => ({ ...l, amount: l.left * l.cost })),
+})))
+const arriveTotal = computed(() => arriveRows.value.reduce((t, r) => t + r.subtotal, 0))
+const supplierCalc = computed(() => {
+  const v = calcView.value
+  if (!v || v.kind !== 'supplier') return null
+  const supplier = supplierById.value.get(v.id)
+  if (!supplier) return null
+  const mine = orders.value.filter((o) => o.supplier_id === v.id)
+  const counted = mine.filter((o) => o.status !== 'Cancelled' && o.status !== 'Draft')
+  const rows = counted.map((po) => ({
+    po,
+    lines: (po.items || [])
+      .filter((l) => num(l.received_qty) > 0)
+      .map((l) => ({ name: l.item_name, unit: l.unit || '', received: num(l.received_qty), cost: num(l.unit_cost), amount: num(l.received_qty) * num(l.unit_cost) })),
+  }))
+  const done = mine.filter((o) => o.status === 'Received')
+  let dated = 0, onTime = 0, ordered = 0, received = 0
+  for (const o of done) {
+    for (const l of o.items || []) { ordered += num(l.quantity); received += num(l.received_qty) }
+    if (o.received_date && o.expected_date) {
+      dated += 1
+      if (daysFrom(o.received_date, String(o.expected_date).slice(0, 10)) <= 0) onTime += 1
+    }
+  }
+  return {
+    supplier,
+    orders: rows,
+    open: counted.filter((o) => OPEN_STATUSES.includes(o.status)).length,
+    spent: rows.reduce((t, r) => t + r.lines.reduce((x, l) => x + l.amount, 0), 0),
+    completed: done.length, dated, onTime, ordered, received,
+    onTimePct: dated ? Math.round((onTime / dated) * 100) : null,
+    fillPct: ordered ? Math.round((received / ordered) * 100) : null,
+  }
+})
 
 // Reliability rating per supplier (from completed orders).
 const scoreboard = computed(() => supplierScorecards(orders.value))
