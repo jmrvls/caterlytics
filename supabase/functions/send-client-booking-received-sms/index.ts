@@ -79,9 +79,8 @@ Deno.serve(async (req) => {
     }
 
     const firstName = String(booking.client_name ?? '').replace(/[\r\n]+/g, ' ').trim().split(/\s+/)[0] || 'there';
-    const shortBiz = bizName.length > 30 ? bizName.slice(0, 29) + '…' : bizName;
-    const contactNumber = Deno.env.get('SUPPORT_CONTACT_NUMBER') ?? '09673193013';
-    const message = `Hi ${firstName}, ${shortBiz} received your booking request for ${formatDate(booking.event_date)}. Status: PENDING. We'll text you once it's confirmed. Questions? Call ${contactNumber}.`;
+    const shortBiz = bizName.trim().length > 60 ? bizName.trim().slice(0, 57) + '...' : bizName.trim();
+    const message = `Hi ${firstName}, ${shortBiz} received your booking request for ${formatDate(booking.event_date)}. Status: PENDING. We'll text you once it's confirmed.`;
 
     try {
       const res = await sendSms(to, message);
