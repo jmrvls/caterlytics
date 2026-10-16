@@ -360,10 +360,24 @@
             </div>
 
             <div v-if="menuItemsByCategory[cat]?.length" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
-              <label v-for="item in menuItemsByCategory[cat]" :key="item.item_id" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
-                <input type="checkbox" :value="item.item_id" v-model="menuForm[cat].item_ids" class="rounded-none accent-emerald-600" />
-                {{ item.item_name }}
-              </label>
+              <div v-for="item in menuItemsByCategory[cat]" :key="item.item_id" class="text-sm text-gray-700 dark:text-gray-200">
+                <div class="flex items-center gap-2">
+                  <label class="flex items-center gap-2 cursor-pointer min-w-0">
+                    <input type="checkbox" :value="item.item_id" v-model="menuForm[cat].item_ids" class="rounded-none accent-emerald-600" />
+                    <span class="truncate">{{ item.item_name }}</span>
+                  </label>
+                  <button type="button" @click="openAllergenItem = openAllergenItem === item.item_id ? null : item.item_id"
+                    :class="(item.allergens || []).length ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'"
+                    class="text-xs whitespace-nowrap flex-shrink-0">
+                    {{ (item.allergens || []).length ? 'Contains: ' + item.allergens.join(', ') : '+ allergens' }}
+                  </button>
+                </div>
+                <div v-if="openAllergenItem === item.item_id" class="mt-1 ml-6 flex flex-wrap gap-1.5">
+                  <button v-for="a in ALLERGEN_OPTIONS" :key="a" type="button" @click="toggleItemAllergen(item, a)"
+                    :class="(item.allergens || []).includes(a) ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'"
+                    class="text-xs px-2 py-0.5 border">{{ a }}</button>
+                </div>
+              </div>
             </div>
             <p v-else class="text-xs text-gray-400 dark:text-gray-500 mb-3">No {{ cat }} items yet. Add one below.</p>
 
@@ -747,9 +761,11 @@ import {
   MENU_CATEGORIES,
   getAllMenuItems,
   createMenuItem,
+  updateMenuItemAllergens,
   getPackageMenu,
   setPackageMenu
 } from '../services/packageService'
+import { ALLERGEN_OPTIONS } from '../services/planningservice'
 import { getAllInventory } from '../services/inventoryService'
 import { getPackagePhotos, uploadPackagePhoto, deletePackagePhoto } from '../services/catalogService'
 import { getMyAddons, createAddon, updateAddon, deleteAddon, getAddonUsageCounts } from '../services/addonService'
@@ -1547,6 +1563,20 @@ function closeMenuModal() {
   showMenuModal.value = false
   menuPackage.value = null
   menuForm.value = {}
+}
+
+const openAllergenItem = ref(null)
+async function toggleItemAllergen(item, allergen) {
+  menuError.value = ''
+  const current = item.allergens || []
+  const next = current.includes(allergen) ? current.filter((a) => a !== allergen) : [...current, allergen]
+  try {
+    const saved = await updateMenuItemAllergens(item.item_id, next)
+    allMenuItems.value = allMenuItems.value.map((i) => (i.item_id === item.item_id ? { ...i, allergens: saved.allergens || next } : i))
+  } catch (error) {
+    menuError.value = `Failed to update allergens for "${item.item_name}". Run event_planning_upgrade.sql first if you haven't.`
+    console.error(error)
+  }
 }
 
 async function handleAddMenuItem(category) {

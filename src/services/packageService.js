@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { ALLERGEN_OPTIONS } from './planningservice';
 
 export async function getAllPackages() {
   const { data, error } = await supabase
@@ -217,6 +218,21 @@ export async function updateMenuItem(itemId, item) {
       category: item.category,
       is_active: item.is_active ?? true,
     })
+    .eq('item_id', itemId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Tag which allergens a dish contains. Event Planning uses this to warn the
+// kitchen when a guest is allergic to a dish on the menu.
+export async function updateMenuItemAllergens(itemId, allergens) {
+  const clean = [...new Set((allergens || []).filter((a) => ALLERGEN_OPTIONS.includes(a)))];
+  const { data, error } = await supabase
+    .from('tbl_menu_items')
+    .update({ allergens: clean })
     .eq('item_id', itemId)
     .select()
     .single();

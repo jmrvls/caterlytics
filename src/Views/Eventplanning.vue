@@ -266,6 +266,12 @@
                   <option value="All">All RSVP</option>
                   <option v-for="r in RSVP_OPTIONS" :key="r" :value="r">{{ r }}</option>
                 </select>
+                <select v-model="viewFilter" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none">
+                  <option value="All">All guests</option>
+                  <option value="Unseated">Not yet seated</option>
+                  <option value="Dietary">With dietary needs</option>
+                  <option value="Allergy">With allergies</option>
+                </select>
               </div>
               <div v-if="canEdit" class="flex gap-2">
                 <button @click="showImport = true" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none">Paste list</button>
@@ -290,7 +296,7 @@
                     <td colspan="6" class="px-3 py-6 text-center text-gray-500 dark:text-gray-400">{{ guests.length ? 'No guests match.' : 'No guests yet.' }}</td>
                   </tr>
                   <tr v-for="g in filteredGuests" :key="g.guest_id" class="text-gray-800 dark:text-gray-200">
-                    <td class="px-3 py-2 font-medium">{{ g.full_name }}</td>
+                    <td class="px-3 py-2 font-medium">{{ g.full_name }}<span v-if="g.group_name" class="block text-xs font-normal text-gray-400">{{ g.group_name }}</span></td>
                     <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ g.contact_number || g.email || '—' }}</td>
                     <td class="px-3 py-2">
                       <select :value="g.rsvp_status" :disabled="!canEdit" @change="changeRsvp(g, $event.target.value)" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs rounded-none">
@@ -301,8 +307,9 @@
                     <td class="px-3 py-2">
                       <div class="flex flex-wrap gap-1">
                         <span v-for="d in g.dietary_preferences" :key="d" class="text-xs px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{{ d }}</span>
-                        <span v-if="g.allergies" class="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">Allergy: {{ g.allergies }}</span>
-                        <span v-if="!(g.dietary_preferences || []).length && !g.allergies" class="text-gray-400">—</span>
+                        <span v-for="a in g.allergens" :key="a" :class="allergyChipCls(g)" class="text-xs px-1.5 py-0.5">{{ a }}<template v-if="g.allergy_severity === 'Severe'"> (severe)</template></span>
+                        <span v-if="g.allergies" :class="allergyChipCls(g)" class="text-xs px-1.5 py-0.5">Allergy: {{ g.allergies }}</span>
+                        <span v-if="!hasRestriction(g)" class="text-gray-400">—</span>
                       </div>
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap text-right">
@@ -317,6 +324,13 @@
 
           <!-- ============ SEATING ============ -->
           <section v-else-if="activeTab === 'Seating'">
+            <div class="hidden print:block mb-3">
+              <p class="text-lg font-bold">Seating chart: {{ selectedBooking.client_name }} — {{ formatDateOnly(selectedBooking.event_date) }}</p>
+              <p class="text-sm">{{ selectedBooking.event_location }}</p>
+            </div>
+            <div class="flex justify-end mb-3 print:hidden">
+              <button @click="printSummary" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none">Print seating chart</button>
+            </div>
             <div v-if="canEdit" class="flex flex-wrap gap-2 items-end mb-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Table name</label>
@@ -330,8 +344,9 @@
               <button @click="autoFillTables" :disabled="tables.length === 0 || unseatedGuests.length === 0 || isAutoSeating" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none disabled:opacity-40">{{ isAutoSeating ? 'Seating…' : 'Auto-seat the rest' }}</button>
             </div>
 
+            <p v-if="seatNote" class="mb-3 text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2 print:hidden">{{ seatNote }}</p>
             <p v-if="seatWarning" :class="seatWarning.level === 'error' ? 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'" class="mb-4 text-sm border px-3 py-2 print:hidden">{{ seatWarning.text }}</p>
-            <p v-if="canEdit && tables.length && guests.length" class="mb-3 text-xs text-gray-400 print:hidden">Tip: drag a guest onto a table to seat them, or back to the "Not yet seated" box to unseat. On a phone, use the "Seat at…" menu.</p>
+            <p v-if="canEdit && tables.length && guests.length" class="mb-3 text-xs text-gray-400 print:hidden">Tip: guests with the same Group stay together when you use Auto-seat. Drag a guest onto a table to seat them, or back to the "Not yet seated" box to unseat. On a phone, use the "Seat at…" menu.</p>
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
               <div class="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
@@ -353,13 +368,19 @@
                   <div class="h-1.5 bg-gray-100 dark:bg-gray-700 mb-2">
                     <div class="h-full bg-emerald-600" :style="{ width: Math.min(100, (seatedAt(t.table_id).length / t.capacity) * 100) + '%' }"></div>
                   </div>
+                  <div v-if="tableBreakdown(t.table_id).length" class="flex flex-wrap gap-1 mb-2">
+                    <span v-for="b in tableBreakdown(t.table_id)" :key="b.label"
+                      :class="b.severe ? 'bg-red-600 text-white' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'"
+                      class="text-[11px] px-1.5 py-0.5">{{ b.count }} {{ b.label }}</span>
+                  </div>
                   <ul class="space-y-1">
                     <li v-for="g in seatedAt(t.table_id)" :key="g.guest_id"
                       :draggable="canEdit" @dragstart="onDragStart(g, $event)" @dragend="endDrag"
                       :class="canEdit ? 'cursor-grab active:cursor-grabbing' : ''"
                       class="flex items-center justify-between text-sm text-gray-800 dark:text-gray-200">
                       <span class="truncate">{{ g.full_name }}
-                        <span v-if="(g.dietary_preferences || []).length || g.allergies" class="text-xs text-amber-600 dark:text-amber-400">•</span>
+                        <span v-if="g.group_name" class="text-xs text-gray-400">· {{ g.group_name }}</span>
+                        <span v-if="hasRestriction(g)" :class="g.allergy_severity === 'Severe' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'" class="text-xs">•</span>
                       </span>
                       <button v-if="canEdit" @click="moveGuest(g, null)" class="text-xs text-gray-400 hover:text-red-500">Unseat</button>
                     </li>
@@ -378,7 +399,7 @@
                     :draggable="canEdit" @dragstart="onDragStart(g, $event)" @dragend="endDrag"
                     :class="canEdit ? 'cursor-grab active:cursor-grabbing' : ''"
                     class="flex items-center justify-between gap-2 text-sm text-gray-800 dark:text-gray-200">
-                    <span class="truncate">{{ g.full_name }}</span>
+                    <span class="truncate">{{ g.full_name }}<span v-if="g.group_name" class="text-xs text-gray-400"> · {{ g.group_name }}</span><span v-if="hasRestriction(g)" :class="g.allergy_severity === 'Severe' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'" class="text-xs"> •</span></span>
                     <select v-if="canEdit" @change="seatFromSelect(g, $event)" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-xs rounded-none max-w-[9rem]">
                       <option value="">Seat at…</option>
                       <option v-for="t in tables" :key="t.table_id" :value="t.table_id" :disabled="seatedAt(t.table_id).length >= t.capacity">{{ t.label }}</option>
@@ -444,51 +465,106 @@
 
           <!-- ============ DIETARY ============ -->
           <section v-else-if="activeTab === 'Dietary'">
-            <div class="flex items-center justify-between mb-3 print:hidden">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Counts exclude guests who declined, so this is what the kitchen prepares for.</p>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3 print:hidden">
+              <div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Counts exclude guests who declined, so this is what the kitchen prepares for.</p>
+                <label class="mt-1 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+                  <input type="checkbox" v-model="includePending" class="accent-emerald-600" />
+                  Include guests who haven't replied yet ({{ rsvp.Pending }} pending)
+                </label>
+              </div>
               <button @click="printSummary" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-none">Print</button>
             </div>
 
             <div class="hidden print:block mb-3">
               <p class="text-lg font-bold">{{ selectedBooking.client_name }} — {{ formatDateOnly(selectedBooking.event_date) }}</p>
               <p class="text-sm">{{ selectedBooking.event_location }}</p>
+              <p class="text-sm">{{ includePending ? 'Attending + pending guests' : 'Confirmed (attending) guests only' }}</p>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
               <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
                 <p class="text-xs text-gray-500 dark:text-gray-400">Guests to serve</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietary.total }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietaryView.total }}</p>
               </div>
               <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-                <p class="text-xs text-gray-500 dark:text-gray-400">With restrictions / allergies</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietary.withRestrictions }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Standard meals</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietaryView.standardMeals }}</p>
               </div>
-              <div v-for="tag in topTags" :key="tag" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-                <p class="text-xs text-gray-500 dark:text-gray-400">{{ tag }}</p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietary.counts[tag] }}</p>
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400">Special meals (any restriction)</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietaryView.specialMeals }}</p>
+              </div>
+              <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3" :class="dietaryView.severeCount ? 'border-red-400 dark:border-red-500' : ''">
+                <p class="text-xs text-gray-500 dark:text-gray-400">Severe allergies</p>
+                <p class="text-2xl font-bold" :class="dietaryView.severeCount ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'">{{ dietaryView.severeCount }}</p>
               </div>
             </div>
+            <div v-if="topTags.length" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div v-for="tag in topTags" :key="tag" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ tag }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">{{ dietaryView.counts[tag] }}</p>
+              </div>
+            </div>
+            <div v-else class="mb-5"></div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-                <p class="font-semibold text-gray-900 dark:text-gray-100 mb-2">All tags</p>
+                <p class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Diet tags</p>
                 <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
                   <li v-for="tag in DIETARY_OPTIONS" :key="tag" class="flex justify-between py-1.5 text-gray-800 dark:text-gray-200">
-                    <span>{{ tag }}</span><span class="font-semibold">{{ dietary.counts[tag] }}</span>
+                    <span>{{ tag }}</span><span class="font-semibold">{{ dietaryView.counts[tag] }}</span>
+                  </li>
+                </ul>
+                <p class="font-semibold text-gray-900 dark:text-gray-100 mt-4 mb-2">Allergens</p>
+                <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                  <li v-for="a in ALLERGEN_OPTIONS" :key="a" class="flex justify-between py-1.5 text-gray-800 dark:text-gray-200">
+                    <span>{{ a }}</span><span class="font-semibold" :class="dietaryView.allergenCounts[a] ? 'text-red-600 dark:text-red-400' : ''">{{ dietaryView.allergenCounts[a] }}</span>
                   </li>
                 </ul>
               </div>
               <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
                 <p class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Allergies to flag to the kitchen</p>
                 <ul class="space-y-2 text-sm">
-                  <li v-for="g in dietary.withAllergies" :key="g.guest_id" class="text-gray-800 dark:text-gray-200">
+                  <li v-for="g in dietaryView.withAllergies" :key="g.guest_id" class="text-gray-800 dark:text-gray-200">
                     <span class="font-medium">{{ g.full_name }}</span>
+                    <span v-if="g.allergy_severity === 'Severe'" class="ml-1 text-[11px] px-1.5 py-0.5 bg-red-600 text-white">SEVERE</span>
                     <span class="text-gray-500 dark:text-gray-400"> · {{ tableLabel(g.table_id) }}</span>
-                    <div class="text-red-600 dark:text-red-400">{{ g.allergies }}</div>
+                    <div class="text-red-600 dark:text-red-400">{{ allergyList(g) }}</div>
                   </li>
-                  <li v-if="dietary.withAllergies.length === 0" class="text-gray-400">No allergies recorded.</li>
+                  <li v-if="dietaryView.withAllergies.length === 0" class="text-gray-400">No allergies recorded.</li>
                 </ul>
+                <div v-if="dietaryView.withNotes.length" class="mt-4">
+                  <p class="font-semibold text-gray-900 dark:text-gray-100 mb-2">Other guest notes</p>
+                  <ul class="space-y-1 text-sm text-gray-800 dark:text-gray-200">
+                    <li v-for="g in dietaryView.withNotes" :key="g.guest_id"><span class="font-medium">{{ g.full_name }}:</span> {{ g.notes }}</li>
+                  </ul>
+                </div>
               </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+              <p class="font-semibold text-gray-900 dark:text-gray-100 mb-1">Dietary needs per table</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">For the waiters: who needs a special plate, and where they sit.</p>
+              <ul class="divide-y divide-gray-100 dark:divide-gray-700 text-sm">
+                <li v-for="r in tableDietaryRows" :key="r.table.table_id" class="py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-800 dark:text-gray-200">
+                  <span class="font-medium min-w-[6rem]">{{ r.table.label }} <span class="text-xs font-normal text-gray-400">({{ r.seated }} seated)</span></span>
+                  <span class="flex flex-wrap gap-1">
+                    <span v-for="b in r.breakdown" :key="b.label"
+                      :class="b.severe ? 'bg-red-600 text-white' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'"
+                      class="text-xs px-1.5 py-0.5">{{ b.count }} {{ b.label }}</span>
+                  </span>
+                </li>
+                <li v-if="unseatedBreakdown.length" class="py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-800 dark:text-gray-200">
+                  <span class="font-medium min-w-[6rem]">Not yet seated</span>
+                  <span class="flex flex-wrap gap-1">
+                    <span v-for="b in unseatedBreakdown" :key="b.label"
+                      :class="b.severe ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'"
+                      class="text-xs px-1.5 py-0.5">{{ b.count }} {{ b.label }}</span>
+                  </span>
+                </li>
+                <li v-if="tableDietaryRows.length === 0 && !unseatedBreakdown.length" class="py-2 text-gray-400">No special dietary needs recorded.</li>
+              </ul>
             </div>
           </section>
 
@@ -523,16 +599,21 @@
               </p>
 
               <!-- Notes the kitchen must see -->
-              <div v-if="prepNotes.length || dietary.withAllergies.length || prepDietaryTags.length" class="mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
+              <div v-if="prepNotes.length || dietary.withAllergies.length || prepDietaryTags.length || dishConflicts.length" class="mb-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
                 <p class="font-semibold text-amber-800 dark:text-amber-200 mb-2">Heads-up for the kitchen</p>
                 <ul class="space-y-1 text-sm text-gray-800 dark:text-gray-200">
+                  <li v-for="c in dishConflicts" :key="'dc' + c.item_id" class="text-red-700 dark:text-red-300">
+                    <span class="font-bold">{{ c.name }}</span> contains {{ c.allergens.join(', ') }}. Guests allergic:
+                    <template v-for="(g, i) in c.guests" :key="g.guest_id">{{ i ? ', ' : '' }}{{ g.full_name }} ({{ tableLabel(g.table_id) }}<template v-if="g.allergy_severity === 'Severe'">, SEVERE</template>)</template>
+                  </li>
+                  <li v-if="anyDishAllergens" class="text-xs text-gray-500 dark:text-gray-400">Checked against allergen tags only. Free-text allergies need a manual check.</li>
                   <li v-for="n in prepNotes" :key="n.label"><span class="font-medium">{{ n.label }}:</span> {{ n.text }}</li>
                   <li v-if="prepDietaryTags.length">
                     <span class="font-medium">Dietary (attending guests):</span>
                     {{ prepDietaryTags.map((t) => `${t} × ${dietary.counts[t]}`).join(', ') }}
                   </li>
                   <li v-for="g in dietary.withAllergies" :key="g.guest_id" class="text-red-700 dark:text-red-300">
-                    <span class="font-medium">Allergy — {{ g.full_name }}</span> ({{ tableLabel(g.table_id) }}): {{ g.allergies }}
+                    <span class="font-medium">Allergy — {{ g.full_name }}</span><span v-if="g.allergy_severity === 'Severe'" class="font-bold"> [SEVERE]</span> ({{ tableLabel(g.table_id) }}): {{ allergyList(g) }}
                   </li>
                 </ul>
               </div>
@@ -555,6 +636,7 @@
                             <span class="font-semibold text-gray-900 dark:text-gray-100" :class="isPrepDone(dishKey(d.item_id)) ? 'line-through opacity-60' : ''">{{ d.name }}</span>
                             <span v-if="d.portion && d.portion !== 'Regular'" class="ml-1 text-xs px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-semibold">{{ d.portion }} serving</span>
                             <span v-for="t in d.tags" :key="t" class="ml-1 text-xs px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 capitalize">{{ t }}</span>
+                            <span v-for="a in (dishAllergenMap[d.item_id] || [])" :key="'al' + a" class="ml-1 text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">Contains {{ a }}</span>
                           </span>
                         </label>
                         <ul class="mt-2 ml-6 text-sm text-gray-700 dark:text-gray-300 divide-y divide-gray-100 dark:divide-gray-700">
@@ -627,7 +709,21 @@
               </label>
             </div>
           </div>
-          <input v-model="guestForm.allergies" type="text" placeholder="Allergies (e.g. shrimp, peanuts)" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none" />
+          <input v-model="guestForm.group_name" list="guest-groups" type="text" maxlength="60" placeholder="Group / family (e.g. Santos Family). Same group is seated together" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none" />
+          <datalist id="guest-groups"><option v-for="n in groupNames" :key="n" :value="n" /></datalist>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Allergies</p>
+            <div class="flex flex-wrap gap-2">
+              <label v-for="a in ALLERGEN_OPTIONS" :key="a" class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-200">
+                <input type="checkbox" :value="a" v-model="guestForm.allergens" class="accent-red-600" /> {{ a }}
+              </label>
+            </div>
+          </div>
+          <input v-model="guestForm.allergies" type="text" placeholder="Other allergies (e.g. kiwi, mushroom)" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none" />
+          <select v-if="guestForm.allergens.length || (guestForm.allergies || '').trim()" v-model="guestForm.allergy_severity" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none">
+            <option value="">How serious? (default: Mild)</option>
+            <option v-for="v in ALLERGY_SEVERITY" :key="v" :value="v">{{ v === 'Severe' ? 'Severe: real allergy, keep separate' : 'Mild: intolerance / avoid if possible' }}</option>
+          </select>
           <textarea v-model="guestForm.notes" rows="2" placeholder="Notes" class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm rounded-none"></textarea>
         </div>
         <div class="flex justify-end gap-2 mt-4">
@@ -668,7 +764,16 @@ import { useChatUnread } from '../composables/useChatUnread'
 import { useReviewAlerts } from '../composables/useReviewAlerts'
 import {
   DIETARY_OPTIONS,
+  ALLERGEN_OPTIONS,
+  ALLERGY_SEVERITY,
   RSVP_OPTIONS,
+  hasAllergy,
+  hasRestriction,
+  tableDietaryBreakdown,
+  suggestSeating,
+  seatGuestsBulk,
+  getMenuItemAllergens,
+  findDishAllergenConflicts,
   getPlannableBookings,
   getGuests,
   addGuest,
@@ -736,6 +841,7 @@ const isLoadingBookings = ref(true)
 const isLoadingPlan = ref(false)
 const isSaving = ref(false)
 const isAutoSeating = ref(false)
+const seatNote = ref('')
 const pageError = ref('')
 const formError = ref('')
 
@@ -755,7 +861,10 @@ const blankGuest = () => ({
   rsvp_status: 'Pending',
   table_id: null,
   dietary_preferences: [],
+  allergens: [],
+  allergy_severity: '',
   allergies: '',
+  group_name: '',
   notes: ''
 })
 const guestForm = ref(blankGuest())
@@ -770,18 +879,48 @@ const seatedCount = computed(() => activeGuests.value.filter((g) => g.table_id).
 const rsvp = computed(() => rsvpSummary(guests.value))
 const dietary = computed(() => summarizeDietary(guests.value))
 const overBooked = computed(() => selectedBooking.value && activeGuests.value.length > selectedBooking.value.guest_count)
+// Dietary tab can show "everyone not declined" (default, what the kitchen preps
+// for) or only guests who confirmed. Kitchen Prep always uses `dietary` above.
+const includePending = ref(true)
+const dietaryConfirmed = computed(() => summarizeDietary(guests.value, { includePending: false }))
+const dietaryView = computed(() => (includePending.value ? dietary.value : dietaryConfirmed.value))
 const topTags = computed(() =>
-  DIETARY_OPTIONS.filter((t) => dietary.value.counts[t] > 0)
-    .sort((a, b) => dietary.value.counts[b] - dietary.value.counts[a])
+  DIETARY_OPTIONS.filter((t) => dietaryView.value.counts[t] > 0)
+    .sort((a, b) => dietaryView.value.counts[b] - dietaryView.value.counts[a])
     .slice(0, 4)
+)
+const viewFilter = ref('All')
+const groupNames = computed(() =>
+  [...new Set(guests.value.map((g) => (g.group_name || '').trim()).filter(Boolean))].sort()
 )
 const filteredGuests = computed(() => {
   const q = guestSearch.value.trim().toLowerCase()
   return guests.value.filter((g) => {
     if (rsvpFilter.value !== 'All' && g.rsvp_status !== rsvpFilter.value) return false
-    return !q || g.full_name.toLowerCase().includes(q)
+    if (viewFilter.value === 'Unseated' && (g.table_id || g.rsvp_status === 'Declined')) return false
+    if (viewFilter.value === 'Dietary' && !hasRestriction(g)) return false
+    if (viewFilter.value === 'Allergy' && !hasAllergy(g)) return false
+    return !q || g.full_name.toLowerCase().includes(q) || String(g.group_name || '').toLowerCase().includes(q)
   })
 })
+
+function allergyList(g) {
+  return [...(g.allergens || []), g.allergies].filter(Boolean).join(', ')
+}
+function allergyChipCls(g) {
+  return g.allergy_severity === 'Severe'
+    ? 'bg-red-600 text-white'
+    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+}
+function tableBreakdown(tableId) {
+  return tableDietaryBreakdown(seatedAt(tableId))
+}
+const tableDietaryRows = computed(() =>
+  tables.value
+    .map((t) => ({ table: t, seated: seatedAt(t.table_id).length, breakdown: tableDietaryBreakdown(seatedAt(t.table_id)) }))
+    .filter((r) => r.breakdown.length > 0)
+)
+const unseatedBreakdown = computed(() => tableDietaryBreakdown(unseatedGuests.value))
 
 // ---------- Landing cards ----------
 const overview = ref({})
@@ -956,6 +1095,8 @@ async function loadPlan() {
 watch(selectedBookingId, () => {
   guestSearch.value = ''
   rsvpFilter.value = 'All'
+  viewFilter.value = 'All'
+  seatNote.value = ''
   loadPlan()
 })
 
@@ -983,7 +1124,13 @@ function openGuestForm(guest = null) {
   formError.value = ''
   editingGuestId.value = guest?.guest_id || null
   guestForm.value = guest
-    ? { ...guest, dietary_preferences: [...(guest.dietary_preferences || [])] }
+    ? {
+        ...guest,
+        dietary_preferences: [...(guest.dietary_preferences || [])],
+        allergens: [...(guest.allergens || [])],
+        allergy_severity: guest.allergy_severity || '',
+        group_name: guest.group_name || ''
+      }
     : blankGuest()
   showGuestForm.value = true
 }
@@ -1112,21 +1259,27 @@ async function moveGuest(g, tableId) {
   }
 }
 
-// Fills tables in order; keeps the order guests were already sorted in.
+// Smart auto-seat: keeps groups / families together and puts guests with the
+// same dietary needs at the same table. One request saves the whole plan.
 async function autoFillTables() {
   if (isAutoSeating.value) return
   pageError.value = ''
+  seatNote.value = ''
   isAutoSeating.value = true
   try {
-    for (const g of [...unseatedGuests.value]) {
-      const target = tables.value.find((t) => seatedAt(t.table_id).length < t.capacity)
-      if (!target) {
-        pageError.value = 'Not enough seats for everyone. Add another table.'
-        break
-      }
-      await moveGuest(g, target.table_id)
-      if (pageError.value) break
+    const plan = suggestSeating(guests.value, tables.value)
+    if (plan.assignments.length) {
+      await seatGuestsBulk(plan.assignments)
+      const seatOf = new Map(plan.assignments.map((x) => [x.guest_id, x.table_id]))
+      guests.value = guests.value.map((g) => (seatOf.has(g.guest_id) ? { ...g, table_id: seatOf.get(g.guest_id) } : g))
     }
+    const notes = [`Seated ${plan.assignments.length} guest(s).`]
+    if (plan.splitGroups.length) notes.push(`Not enough room to keep together: ${plan.splitGroups.join(', ')}.`)
+    seatNote.value = notes.join(' ')
+    if (plan.unplaced.length) pageError.value = `Not enough seats for ${plan.unplaced.length} guest(s). Add another table.`
+  } catch (e) {
+    pageError.value = e.message
+    await loadPlan() // the database is the source of truth
   } finally {
     isAutoSeating.value = false
   }
@@ -1148,6 +1301,11 @@ const prepDoneCount = computed(() => {
   ]
   return keys.filter((k) => k in prep.value.checks).length
 })
+const dishAllergenMap = ref({})
+const dishConflicts = computed(() =>
+  prep.value ? findDishAllergenConflicts(prep.value.dishes, dishAllergenMap.value, guests.value) : []
+)
+const anyDishAllergens = computed(() => Object.values(dishAllergenMap.value).some((a) => a.length > 0))
 const prepDietaryTags = computed(() => DIETARY_OPTIONS.filter((t) => dietary.value.counts[t] > 0))
 const prepNotes = computed(() => {
   const b = prep.value?.booking
@@ -1171,6 +1329,8 @@ async function loadPrep() {
     const result = await getKitchenPrepList(bookingId)
     if (bookingId !== selectedBookingId.value) return // user switched events meanwhile
     prep.value = result
+    const map = await getMenuItemAllergens(result.dishes.map((d) => d.item_id))
+    if (bookingId === selectedBookingId.value) dishAllergenMap.value = map
   } catch (e) {
     if (bookingId !== selectedBookingId.value) return
     prep.value = null
