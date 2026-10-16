@@ -255,15 +255,40 @@
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                      <tr v-for="f in forecastRows" :key="f.item_id" class="text-gray-700 dark:text-gray-300">
-                        <td class="py-2 pr-4 font-medium text-gray-800 dark:text-gray-100">{{ f.name }}</td>
-                        <td class="py-2 px-4 text-right tabular-nums">{{ formatQty(f.needed, f.unit) }}</td>
-                        <td class="py-2 px-4 text-right tabular-nums">{{ formatQty(f.in_stock, f.unit) }}</td>
-                        <td class="py-2 pl-4 text-xs font-semibold">
-                          <span v-if="f.short_by > 0" class="text-red-600 dark:text-red-400">Short by {{ formatQty(f.short_by, f.unit) }}</span>
-                          <span v-else class="text-emerald-600 dark:text-emerald-400">Enough</span>
-                        </td>
-                      </tr>
+                      <template v-for="f in forecastRows" :key="f.item_id">
+                        <tr class="text-gray-700 dark:text-gray-300">
+                          <td class="py-2 pr-4 font-medium text-gray-800 dark:text-gray-100">
+                            {{ f.name }}
+                            <button type="button" @click="toggleCalc(f.item_id)" class="block text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline" :aria-expanded="expandedCalc.has(f.item_id)">
+                              {{ expandedCalc.has(f.item_id) ? 'Hide computation' : 'View computation' }}
+                            </button>
+                          </td>
+                          <td class="py-2 px-4 text-right tabular-nums">{{ formatQty(f.needed, f.unit) }}</td>
+                          <td class="py-2 px-4 text-right tabular-nums">{{ formatQty(f.in_stock, f.unit) }}</td>
+                          <td class="py-2 pl-4 text-xs font-semibold">
+                            <span v-if="f.short_by > 0" class="text-red-600 dark:text-red-400">Short by {{ formatQty(f.short_by, f.unit) }}</span>
+                            <span v-else class="text-emerald-600 dark:text-emerald-400">Enough</span>
+                          </td>
+                        </tr>
+                        <tr v-if="expandedCalc.has(f.item_id)" class="bg-gray-50 dark:bg-gray-900/40">
+                          <td colspan="4" class="px-4 py-3">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">How we got {{ formatQty(f.needed, f.unit) }} needed</p>
+                            <ul class="space-y-1 text-xs text-gray-700 dark:text-gray-300 tabular-nums">
+                              <li v-for="c in calcBreakdown(f.item_id)" :key="c.booking_id" class="flex flex-wrap gap-x-2">
+                                <span class="font-semibold">{{ formatEventDate(c.event_date) }}</span>
+                                <span class="capitalize">{{ c.client_name }}:</span>
+                                <span>{{ c.guest_count }} guests × {{ formatQty(c.perGuest, f.unit) }}/guest = <strong>{{ formatQty(c.needed, f.unit) }}</strong></span>
+                              </li>
+                            </ul>
+                            <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-800 dark:text-gray-100 tabular-nums space-y-0.5">
+                              <p>Total needed = {{ calcBreakdown(f.item_id).map((c) => formatQty(c.needed)).join(' + ') }} = <strong>{{ formatQty(f.needed, f.unit) }}</strong></p>
+                              <p>In stock = <strong>{{ formatQty(f.in_stock, f.unit) }}</strong></p>
+                              <p v-if="f.short_by > 0" class="text-red-600 dark:text-red-400">Short by = {{ formatQty(f.needed) }} − {{ formatQty(f.in_stock) }} = <strong>{{ formatQty(f.short_by, f.unit) }}</strong></p>
+                              <p v-else class="text-emerald-600 dark:text-emerald-400">Enough: {{ formatQty(f.in_stock) }} − {{ formatQty(f.needed) }} = <strong>{{ formatQty(f.in_stock - f.needed, f.unit) }}</strong> left</p>
+                            </div>
+                          </td>
+                        </tr>
+                      </template>
                     </tbody>
                   </table>
                 </div>
@@ -355,7 +380,7 @@
 
             <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mb-3">
               <p>Unit cost: ₱{{ formatCost(i.unit_cost) }}</p>
-              <p>Value: ₱{{ formatMoney(stockValue(i)) }}</p>
+              <p>Value: ₱{{ formatMoney(stockValue(i)) }} <button type="button" @click="openCalc(i)" class="ml-1 font-semibold text-emerald-600 dark:text-emerald-400 underline">View computation</button></p>
               <p v-if="expiryInfo(i)" :class="EXPIRY_TEXT[expiryInfo(i).state]" class="font-semibold">{{ expiryInfo(i).label }}</p>
               <p v-if="lastMoved[i.item_id]">Updated {{ timeAgo(lastMoved[i.item_id]) }}</p>
               <p v-if="needByItem.get(i.item_id)?.short_by > 0" class="col-span-2 font-semibold text-red-600 dark:text-red-400">Short by {{ formatQty(needByItem.get(i.item_id).short_by, i.unit || 'kg') }} for pending events</p>
@@ -373,7 +398,7 @@
                 @click="reorderItem(i)"
                 class="flex-1 py-2.5 rounded-none text-sm font-semibold text-white bg-emerald-600 active:bg-emerald-700"
               >
-                Reorder
+                Reorder {{ reorderQtyFor(i) }} {{ i.unit || 'kg' }}
               </button>
             </div>
 
@@ -446,7 +471,10 @@
                   </td>
                   <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums hidden xl:table-cell">{{ formatQty(i.low_stock_threshold, i.unit || 'kg') }}</td>
                   <td class="px-4 py-3.5 text-right text-gray-600 dark:text-gray-300 tabular-nums">₱{{ formatCost(i.unit_cost) }}</td>
-                  <td class="px-4 py-3.5 text-right text-gray-800 dark:text-gray-100 tabular-nums">₱{{ formatMoney(stockValue(i)) }}</td>
+                  <td class="px-4 py-3.5 text-right text-gray-800 dark:text-gray-100 tabular-nums">
+                    <div>₱{{ formatMoney(stockValue(i)) }}</div>
+                    <button type="button" @click="openCalc(i)" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">View computation</button>
+                  </td>
                   <td class="px-4 py-3.5 whitespace-nowrap">
                     <span v-if="expiryInfo(i)" :class="EXPIRY_TEXT[expiryInfo(i).state]" class="text-xs font-semibold">{{ expiryInfo(i).label }}</span>
                     <span v-else class="text-xs text-gray-400 dark:text-gray-500">—</span>
@@ -459,7 +487,7 @@
                   <td class="px-4 py-3.5">
                     <div class="flex items-center justify-end gap-2">
                       <button @click="openAdjustModal(i)" class="px-3 h-8 flex items-center justify-center rounded-none border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700" title="Stock In / Out">Adjust</button>
-                      <button v-if="needsReorder(i)" @click="reorderItem(i)" class="px-3 h-8 flex items-center justify-center rounded-none bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700" :title="`Order about ${reorderQtyFor(i)} ${i.unit || 'kg'} from a supplier`">Reorder</button>
+                      <button v-if="needsReorder(i)" @click="reorderItem(i)" class="px-3 h-8 flex items-center justify-center rounded-none bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700" :title="`Order about ${reorderQtyFor(i)} ${i.unit || 'kg'} from a supplier`">Reorder <span class="ml-1 font-normal opacity-90">{{ reorderQtyFor(i) }} {{ i.unit || 'kg' }}</span></button>
                       <button @click="openEditModal(i)" class="w-8 h-8 flex items-center justify-center rounded-none text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30" title="Edit item" aria-label="Edit item">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -581,6 +609,67 @@
       </div>
     </div>
 
+    <!-- ============ VIEW COMPUTATION MODAL ============ -->
+    <div v-if="calcItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeCalc">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div class="min-w-0">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Computation</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ calcItem.item_name }}</p>
+          </div>
+          <button type="button" @click="closeCalc" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none" aria-label="Close">&times;</button>
+        </div>
+
+        <div class="space-y-4 text-sm text-gray-700 dark:text-gray-200">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Stock value</p>
+            <p class="tabular-nums">{{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }} × ₱{{ formatCost(calcItem.unit_cost) }} = <strong>₱{{ formatMoney(stockValue(calcItem)) }}</strong></p>
+          </div>
+
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Status</p>
+            <p class="tabular-nums">
+              In stock {{ formatQty(calcItem.quantity, calcItem.unit || 'kg') }} vs. alert level {{ formatQty(calcItem.low_stock_threshold, calcItem.unit || 'kg') }}
+              → <strong :class="LEVELS[stockLevel(calcItem)].text">{{ LEVELS[stockLevel(calcItem)].label }}</strong>
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">
+              Low = at or below {{ formatQty(calcItem.low_stock_threshold) }} · Running low = up to {{ formatQty(Number(calcItem.low_stock_threshold) * NEAR_LOW_FACTOR) }} ({{ formatQty(calcItem.low_stock_threshold) }} × {{ NEAR_LOW_FACTOR }})
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 tabular-nums">
+              Stock bar = {{ formatQty(calcItem.quantity) }} ÷ ({{ formatQty(calcItem.low_stock_threshold) }} × 3) = {{ Math.round(stockRatio(calcItem) * 100) }}%
+            </p>
+          </div>
+
+          <div v-if="calcNeed && calcNeed.needed > 0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Pending events</p>
+            <div v-if="calcBreakdown(calcItem.item_id).length" class="text-xs text-gray-500 dark:text-gray-400 mb-1 tabular-nums">
+              <p v-for="c in calcBreakdown(calcItem.item_id)" :key="c.booking_id">{{ c.client_name || 'Event' }} ({{ formatEventDate(c.event_date) }}): {{ formatQty(c.needed, calcItem.unit || 'kg') }}</p>
+            </div>
+            <p class="tabular-nums">Total needed = <strong>{{ formatQty(calcNeed.needed, calcItem.unit || 'kg') }}</strong></p>
+            <p v-if="calcNeed.short_by > 0" class="text-red-600 dark:text-red-400 tabular-nums">Short by = {{ formatQty(calcNeed.needed) }} − {{ formatQty(calcNeed.in_stock) }} = <strong>{{ formatQty(calcNeed.short_by, calcItem.unit || 'kg') }}</strong></p>
+            <p v-else class="text-emerald-600 dark:text-emerald-400 tabular-nums">Enough: {{ formatQty(calcNeed.in_stock) }} − {{ formatQty(calcNeed.needed) }} = <strong>{{ formatQty(calcNeed.in_stock - calcNeed.needed, calcItem.unit || 'kg') }}</strong> left</p>
+          </div>
+
+          <div v-if="needsReorder(calcItem)">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Suggested reorder</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">Top up = {{ formatQty(Number(calcItem.low_stock_threshold) * 3) }} (alert × 3) − {{ formatQty(calcItem.quantity) }} in stock, at least {{ formatQty(calcItem.low_stock_threshold) }}</p>
+            <p v-if="(calcNeed?.short_by || 0) > 0" class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">For events = {{ Math.ceil(calcNeed.short_by) }} (short) + {{ formatQty(calcItem.low_stock_threshold) }} (alert level)</p>
+            <p class="mt-1 tabular-nums">Order about <strong>{{ formatQty(reorderQtyFor(calcItem), calcItem.unit || 'kg') }}</strong> <span class="text-xs text-gray-500 dark:text-gray-400">(the larger of the two)</span></p>
+          </div>
+
+          <div v-if="expiryInfo(calcItem)">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Expiry</p>
+            <p :class="EXPIRY_TEXT[expiryInfo(calcItem).state]" class="font-semibold">{{ formatEventDate(calcItem.expiry_date) }} → {{ expiryInfo(calcItem).label }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Flagged "soon" at {{ EXPIRING_SOON_DAYS }} days or less.</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end mt-5">
+          <button type="button" @click="closeCalc" class="px-4 py-2 text-sm font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ STOCK IN / OUT MODAL ============ -->
     <div v-if="showAdjustModal && adjustItem" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
@@ -686,7 +775,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import {
   isLowStock as isLow, formatQty, formatCost, formatMoney, stockLevel, stockRatio, stockValue,
-  expiryInfo, suggestedReorderQty, timeAgo, ITEM_CATEGORIES, EXPIRING_SOON_DAYS
+  expiryInfo, suggestedReorderQty, timeAgo, ITEM_CATEGORIES, EXPIRING_SOON_DAYS, NEAR_LOW_FACTOR
 } from '../utils/inventory'
 
 const router = useRouter()
@@ -1010,6 +1099,31 @@ const forecastRows = computed(() => {
   const all = forecast.value?.items || []
   return showAllForecast.value ? all : all.filter((i) => i.short_by > 0)
 })
+// Step-by-step math shown under each ingredient ("View computation").
+const expandedCalc = ref(new Set())
+function toggleCalc(itemId) {
+  const next = new Set(expandedCalc.value)
+  if (next.has(itemId)) next.delete(itemId)
+  else next.add(itemId)
+  expandedCalc.value = next
+}
+function calcBreakdown(itemId) {
+  const out = []
+  for (const e of forecast.value?.events || []) {
+    const line = e.lines.find((l) => l.item_id === itemId)
+    if (!line) continue
+    const guests = Number(e.guest_count) || 0
+    out.push({
+      booking_id: e.booking_id,
+      event_date: e.event_date,
+      client_name: e.client_name,
+      guest_count: guests,
+      needed: line.needed,
+      perGuest: guests > 0 ? line.needed / guests : 0,
+    })
+  }
+  return out
+}
 const needByItem = computed(() => new Map((forecast.value?.items || []).map((i) => [i.item_id, i])))
 
 const forecastSummary = computed(() => {
@@ -1029,6 +1143,12 @@ function formatEventDate(dateStr) {
 }
 
 // ---------- Reorder (opens a pre-filled purchase order on the Suppliers page) ----------
+// ---------- Per-row "View computation" modal ----------
+const calcItem = ref(null)
+const calcNeed = computed(() => (calcItem.value ? needByItem.value.get(calcItem.value.item_id) || null : null))
+const openCalc = (i) => { calcItem.value = i }
+const closeCalc = () => { calcItem.value = null }
+
 const needsReorder = (i) => stockLevel(i) !== 'ok' || (needByItem.value.get(i.item_id)?.short_by || 0) > 0
 const reorderQtyFor = (i) => suggestedReorderQty(i, needByItem.value.get(i.item_id)?.short_by || 0)
 
